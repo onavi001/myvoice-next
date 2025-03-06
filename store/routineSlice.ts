@@ -45,7 +45,7 @@ export const fetchRoutines = createAsyncThunk(
     try {
       const response = await fetch("/api/routines", {
         method: "GET",
-        credentials: "include", // Para enviar cookies
+        credentials: "include",
       });
       if (!response.ok) throw new Error((await response.json()).message);
       return (await response.json()) as Routine[];
@@ -136,9 +136,18 @@ const routineSlice = createSlice({
           state.routines[index] = updatedRoutine;
         }
       })
+      .addCase(addRoutine.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(addRoutine.fulfilled, (state, action: PayloadAction<Routine>) => {
+        state.loading = false;
         state.routines.push(action.payload);
         state.selectedRoutineIndex = state.routines.length - 1;
+      })
+      .addCase(addRoutine.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
       });
   },
 });

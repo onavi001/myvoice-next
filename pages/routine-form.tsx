@@ -8,16 +8,32 @@ import jwt from "jsonwebtoken";
 
 export default function RoutineFormPage() {
   const dispatch = useDispatch<AppDispatch>();
-  const { user, loading } = useSelector((state: RootState) => state.user);
+  const { user, loading: userLoading, error: userError } = useSelector((state: RootState) => state.user);
+  const { loading: routineLoading, error: routineError } = useSelector((state: RootState) => state.routine);
   const router = useRouter();
+
   const [formData, setFormData] = useState({
     name: "",
-    days: [{ dayName: "", exercises: [{ name: "", muscleGroup: "", sets: 0, reps: 0, weight: "", rest: "", tips: ["", ""], completed: false, videos: [{ url: "", isCurrent: false }] }], musclesWorked: [], warmupOptions: [], explanation: "" }],
+    days: [
+      {
+        dayName: "",
+        exercises: [
+          { name: "", sets: 0, reps: 0, weight: "", rest: "", tips: ["", ""], completed: false, muscleGroup: "", videos: [] },
+        ],
+        musclesWorked: [],
+        warmupOptions: [],
+        explanation: "",
+      },
+    ],
   });
 
   useEffect(() => {
-    if (!user && !loading) router.push("/");
-  }, [user, router, loading]);
+    console.log("User:", user, "User Loading:", userLoading);
+    if (!user && !userLoading) {
+      console.log("No user, redirecting to /");
+      router.push("/");
+    }
+  }, [user, userLoading, router]);
 
   const handleRoutineChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -40,25 +56,43 @@ export default function RoutineFormPage() {
   const addDay = () => {
     setFormData({
       ...formData,
-      days: [...formData.days, { dayName: "", exercises: [], musclesWorked: [], warmupOptions: [], explanation: "" }],
+      days: [
+        ...formData.days,
+        { dayName: "", exercises: [], musclesWorked: [], warmupOptions: [], explanation: "" },
+      ],
     });
   };
 
   const addExercise = (dayIndex: number) => {
     const updatedDays = [...formData.days];
-    updatedDays[dayIndex].exercises.push({ name: "", muscleGroup: "", sets: 0, reps: 0, weight: "", rest: "", tips: ["", ""], completed: false, videos: [{ url: "", isCurrent: false }] });
+    updatedDays[dayIndex].exercises.push({
+      name: "",
+      sets: 0,
+      reps: 0,
+      weight: "",
+      rest: "",
+      tips: ["", ""],
+      completed: false,
+      muscleGroup: "",
+      videos: [],
+    });
     setFormData({ ...formData, days: updatedDays });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (user) {
+      console.log("Submitting routine:", formData);
       await dispatch(addRoutine({ ...formData, userId: user._id }));
-      router.push("/routine");
+      if (!routineError) {
+        router.push("/routine");
+      }
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Cargando...</div>;
+  if (userLoading || routineLoading) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Cargando...</div>;
+  if (userError) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Error: {userError}</div>;
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
@@ -108,6 +142,12 @@ export default function RoutineFormPage() {
                     onChange={(e) => handleExerciseChange(dayIndex, exerciseIndex, "weight", e.target.value)}
                     className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs placeholder-[#B0B0B0] focus:outline-none focus:ring-1 focus:ring-[#34C759]"
                   />
+                  <input
+                    placeholder="Grupo muscular"
+                    value={exercise.muscleGroup}
+                    onChange={(e) => handleExerciseChange(dayIndex, exerciseIndex, "muscleGroup", e.target.value)}
+                    className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs placeholder-[#B0B0B0] focus:outline-none focus:ring-1 focus:ring-[#34C759]"
+                  />
                 </div>
               ))}
               <button
@@ -128,11 +168,13 @@ export default function RoutineFormPage() {
           </button>
           <button
             type="submit"
-            className="w-full bg-[#34C759] text-black py-2 rounded hover:bg-[#2DBF4E] text-xs"
+            disabled={routineLoading}
+            className="w-full bg-[#34C759] text-black py-2 rounded hover:bg-[#2DBF4E] text-xs disabled:opacity-50"
           >
-            Guardar Rutina
+            {routineLoading ? "Guardando..." : "Guardar Rutina"}
           </button>
         </form>
+        {routineError && <p className="text-red-500 mt-2">Error: {routineError}</p>}
       </div>
     </div>
   );
@@ -140,12 +182,16 @@ export default function RoutineFormPage() {
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const token = context.req.cookies.token;
-  if (!token) return { redirect: { destination: "/", permanent: false } };
+  if (!token) {
+    console.log("No token found, redirecting to /");
+    return { redirect: { destination: "/", permanent: false } };
+  }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "my-super-secret-key") as { userId: string };
     return { props: {} };
   } catch (error) {
+    console.error("Error in getServerSideProps:", error);
     return { redirect: { destination: "/", permanent: false } };
   }
 };
