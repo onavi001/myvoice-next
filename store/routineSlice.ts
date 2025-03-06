@@ -1,6 +1,4 @@
 import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
-import {dbConnect} from "../lib/mongodb";
-import Routine from "../models/routines";
 
 interface Routine {
   _id: string;
@@ -41,21 +39,22 @@ const initialState: RoutineState = {
   error: null,
 };
 
-// Thunk para obtener rutinas desde MongoDB
 export const fetchRoutines = createAsyncThunk(
   "routine/fetchRoutines",
-  async (userId: string, { rejectWithValue }) => {
+  async (_: void, { rejectWithValue }) => {
     try {
-      await dbConnect();
-      const routines = await Routine.find({ userId }).lean();
-      return routines as unknown as Routine[];
+      const response = await fetch("/api/routines", {
+        method: "GET",
+        credentials: "include", // Para enviar cookies
+      });
+      if (!response.ok) throw new Error((await response.json()).message);
+      return (await response.json()) as Routine[];
     } catch (error) {
       return rejectWithValue((error as Error).message);
     }
   }
 );
 
-// Thunk para actualizar el estado "completed" de un ejercicio
 export const updateExerciseCompleted = createAsyncThunk(
   "routine/updateExerciseCompleted",
   async (
@@ -68,14 +67,32 @@ export const updateExerciseCompleted = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      await dbConnect();
-      const updatePath = `days.${dayIndex}.exercises.${exerciseIndex}.completed`;
-      const routine = await Routine.findByIdAndUpdate(
-        routineId,
-        { $set: { [updatePath]: completed } },
-        { new: true }
-      ).lean();
-      return routine as unknown as Routine;
+      const response = await fetch("/api/routines", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ routineId, dayIndex, exerciseIndex, completed }),
+      });
+      if (!response.ok) throw new Error((await response.json()).message);
+      return (await response.json()) as Routine;
+    } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+
+export const addRoutine = createAsyncThunk(
+  "routine/addRoutine",
+  async (routineData: Omit<Routine, "_id" | "createdAt" | "updatedAt">, { rejectWithValue }) => {
+    try {
+      const response = await fetch("/api/routines", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(routineData),
+      });
+      if (!response.ok) throw new Error((await response.json()).message);
+      return (await response.json()) as Routine;
     } catch (error) {
       return rejectWithValue((error as Error).message);
     }
@@ -91,6 +108,10 @@ const routineSlice = createSlice({
     },
     selectRoutine(state, action: PayloadAction<number>) {
       state.selectedRoutineIndex = action.payload;
+    },
+    logout(state) {
+      state.routines = [];
+      state.selectedRoutineIndex = null;
     },
   },
   extraReducers: (builder) => {
@@ -114,9 +135,13 @@ const routineSlice = createSlice({
         if (index !== -1) {
           state.routines[index] = updatedRoutine;
         }
+      })
+      .addCase(addRoutine.fulfilled, (state, action: PayloadAction<Routine>) => {
+        state.routines.push(action.payload);
+        state.selectedRoutineIndex = state.routines.length - 1;
       });
   },
 });
 
-export const { setRoutines, selectRoutine } = routineSlice.actions;
+export const { setRoutines, selectRoutine, logout } = routineSlice.actions;
 export default routineSlice.reducer;

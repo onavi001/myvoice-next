@@ -1,6 +1,4 @@
 import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
-import {dbConnect} from "../lib/mongodb";
-import Progress from "../models/progress";
 
 interface ProgressEntry {
   _id: string;
@@ -27,28 +25,34 @@ const initialState: ProgressState = {
   error: null,
 };
 
-// Thunk para obtener progreso desde MongoDB
 export const fetchProgress = createAsyncThunk(
   "progress/fetchProgress",
-  async (userId: string, { rejectWithValue }) => {
+  async (_: void, { rejectWithValue }) => {
     try {
-      await dbConnect();
-      const progress = await Progress.find({ userId }).lean();
-      return progress as unknown as ProgressEntry[];
+      const response = await fetch("/api/progress", {
+        method: "GET",
+        credentials: "include", // Enviar cookies con el token
+      });
+      if (!response.ok) throw new Error((await response.json()).message);
+      return (await response.json()) as ProgressEntry[];
     } catch (error) {
       return rejectWithValue((error as Error).message);
     }
   }
 );
 
-// Thunk para agregar un nuevo progreso
 export const addProgressEntry = createAsyncThunk(
   "progress/addProgressEntry",
-  async (progressData: Omit<ProgressEntry, "_id">, { rejectWithValue }) => {
+  async (progressData: Omit<ProgressEntry, "_id" | "date">, { rejectWithValue }) => {
     try {
-      await dbConnect();
-      const progress = await Progress.create(progressData);
-      return progress as unknown as ProgressEntry;
+      const response = await fetch("/api/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(progressData),
+      });
+      if (!response.ok) throw new Error((await response.json()).message);
+      return (await response.json()) as ProgressEntry;
     } catch (error) {
       return rejectWithValue((error as Error).message);
     }
@@ -77,8 +81,17 @@ const progressSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
+      .addCase(addProgressEntry.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(addProgressEntry.fulfilled, (state, action: PayloadAction<ProgressEntry>) => {
+        state.loading = false;
         state.progress.push(action.payload);
+      })
+      .addCase(addProgressEntry.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
       });
   },
 });

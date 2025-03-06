@@ -1,7 +1,5 @@
 import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
-import {dbConnect} from "../lib/mongodb";
-import User from "../models/users";
-import bcrypt from "bcryptjs";
+import Cookies from "js-cookie";
 
 interface User {
   _id: string;
@@ -11,45 +9,68 @@ interface User {
 
 interface UserState {
   user: User | null;
+  token: string | null;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: UserState = {
   user: null,
+  token: Cookies.get("token") || null,
   loading: false,
   error: null,
 };
 
-// Thunk para registrar un usuario
 export const registerUser = createAsyncThunk(
   "user/registerUser",
   async ({ username, email, password }: { username: string; email: string; password: string }, { rejectWithValue }) => {
     try {
-      await dbConnect();
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const user = await User.create({ username, email, password: hashedPassword }) as any;
-      return { _id: user._id.toString(), username: user.username, email: user.email } as User;
+      const response = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, email, password }),
+      });
+      if (!response.ok) throw new Error((await response.json()).message);
+      return await response.json();
     } catch (error) {
       return rejectWithValue((error as Error).message);
     }
   }
 );
 
-// Thunk para iniciar sesión
 export const loginUser = createAsyncThunk(
   "user/loginUser",
   async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
     try {
-      await dbConnect();
-      const user = await User.findOne({ email }).lean();
-      if (!user) throw new Error("User not found");
-
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) throw new Error("Invalid credentials");
-
-      return { _id: user._id.toString(), username: user.username, email: user.email } as User;
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!response.ok) throw new Error((await response.json()).message);
+      const data = await response.json();
+      Cookies.set("token", data.token, { expires: 1 / 24 }); // 1 hora
+      return { user: data.user, token: data.token };
     } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+
+export const verifyUser = createAsyncThunk(
+  "user/verifyUser",
+  async (_, { rejectWithValue }) => {
+    const token = Cookies.get("token");
+    if (!token) throw new Error("No token found");
+
+    try {
+      const response = await fetch("/api/verify", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error((await response.json()).message);
+      return await response.json();
+    } catch (error) {
+      Cookies.remove("token");
       return rejectWithValue((error as Error).message);
     }
   }
@@ -59,11 +80,21 @@ const userSlice = createSlice({
   name: "user",
   initialState,
   reducers: {
-    setUser(state, action: PayloadAction<User | null>) {
-      state.user = action.payload;
+    setUser(state, action: PayloadAction<{ user: User; token: string } | null>) {
+      if (action.payload) {
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        Cookies.set("token", action.payload.token, { expires: 1 / 24 });
+      } else {
+        state.user = null;
+        state.token = null;
+        Cookies.remove("token");
+      }
     },
     logout(state) {
       state.user = null;
+      state.token = null;
+      Cookies.remove("token");
     },
   },
   extraReducers: (builder) => {
@@ -72,9 +103,8 @@ const userSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(registerUser.fulfilled, (state, action: PayloadAction<User>) => {
+      .addCase(registerUser.fulfilled, (state, action: PayloadAction<any>) => {
         state.loading = false;
-        state.user = action.payload;
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.loading = false;
@@ -84,12 +114,27 @@ const userSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(loginUser.fulfilled, (state, action: PayloadAction<User>) => {
+      .addCase(loginUser.fulfilled, (state, action: PayloadAction<{ user: User; token: string }>) => {
         state.loading = false;
-        state.user = action.payload;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(verifyUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(verifyUser.fulfilled, (state, action: PayloadAction<{ user: User }>) => {
+        state.loading = false;
+        state.user = action.payload.user;
+      })
+      .addCase(verifyUser.rejected, (state, action) => {
+        state.loading = false;
+        state.user = null;
+        state.token = null;
         state.error = action.payload as string;
       });
   },

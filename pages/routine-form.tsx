@@ -1,12 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState, AppDispatch } from "../store";
+import { addRoutine } from "../store/routineSlice";
 import { useRouter } from "next/router";
+import { GetServerSideProps } from "next";
+import jwt from "jsonwebtoken";
 
 export default function RoutineFormPage() {
+  const dispatch = useDispatch<AppDispatch>();
+  const { user, loading } = useSelector((state: RootState) => state.user);
   const router = useRouter();
   const [formData, setFormData] = useState({
     name: "",
-    days: [{ dayName: "", exercises: [{ name: "", sets: 0, reps: 0, weight: "", rest: "", tips: ["", ""] }], musclesWorked: [], warmupOptions: [], explanation: "" }],
+    days: [{ dayName: "", exercises: [{ name: "", muscleGroup: "", sets: 0, reps: 0, weight: "", rest: "", tips: ["", ""], completed: false, videos: [{ url: "", isCurrent: false }] }], musclesWorked: [], warmupOptions: [], explanation: "" }],
   });
+
+  useEffect(() => {
+    if (!user && !loading) router.push("/");
+  }, [user, router, loading]);
 
   const handleRoutineChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -35,15 +46,19 @@ export default function RoutineFormPage() {
 
   const addExercise = (dayIndex: number) => {
     const updatedDays = [...formData.days];
-    updatedDays[dayIndex].exercises.push({ name: "", sets: 0, reps: 0, weight: "", rest: "", tips: ["", ""] });
+    updatedDays[dayIndex].exercises.push({ name: "", muscleGroup: "", sets: 0, reps: 0, weight: "", rest: "", tips: ["", ""], completed: false, videos: [{ url: "", isCurrent: false }] });
     setFormData({ ...formData, days: updatedDays });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Aquí deberías despachar una acción para guardar en MongoDB
-    router.push("/routine");
+    if (user) {
+      await dispatch(addRoutine({ ...formData, userId: user._id }));
+      router.push("/routine");
+    }
   };
+
+  if (loading) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Cargando...</div>;
 
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
@@ -87,6 +102,12 @@ export default function RoutineFormPage() {
                     onChange={(e) => handleExerciseChange(dayIndex, exerciseIndex, "reps", Number(e.target.value))}
                     className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs placeholder-[#B0B0B0] focus:outline-none focus:ring-1 focus:ring-[#34C759]"
                   />
+                  <input
+                    placeholder="Peso"
+                    value={exercise.weight}
+                    onChange={(e) => handleExerciseChange(dayIndex, exerciseIndex, "weight", e.target.value)}
+                    className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs placeholder-[#B0B0B0] focus:outline-none focus:ring-1 focus:ring-[#34C759]"
+                  />
                 </div>
               ))}
               <button
@@ -116,3 +137,15 @@ export default function RoutineFormPage() {
     </div>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const token = context.req.cookies.token;
+  if (!token) return { redirect: { destination: "/", permanent: false } };
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "my-super-secret-key") as { userId: string };
+    return { props: {} };
+  } catch (error) {
+    return { redirect: { destination: "/", permanent: false } };
+  }
+};
