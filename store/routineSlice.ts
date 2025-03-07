@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
+import { RootState } from ".";
 
 interface Routine {
   _id: string;
@@ -18,6 +19,7 @@ interface Routine {
       rest: string;
       tips: string[];
       completed: boolean;
+      notes?: string;
       videos: { url: string; isCurrent: boolean }[];
     }[];
   }[];
@@ -99,6 +101,53 @@ export const addRoutine = createAsyncThunk(
   }
 );
 
+export const deleteRoutine = createAsyncThunk(
+  "routine/deleteRoutine",
+  async (routineIndex: number, { getState }) => {
+    const state = getState() as RootState;
+    const routineId = state.routine.routines[routineIndex]._id;
+    const response = await fetch(`/api/routines/${routineId}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (!response.ok) throw new Error("Failed to delete routine");
+    return routineIndex;
+  }
+);
+
+export const setExerciseVideos = createAsyncThunk(
+  "routine/setExerciseVideos",
+  async ({ routineId, dayIndex, exerciseIndex, videos }: {
+    routineId: string;
+    dayIndex: number;
+    exerciseIndex: number;
+    videos: { url: string; isCurrent: boolean }[];
+  }) => {
+    const response = await fetch(`/api/routines/${routineId}/exercise-videos`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ dayIndex, exerciseIndex, videos }),
+    });
+    if (!response.ok) throw new Error("Failed to update exercise videos");
+    return { routineId, dayIndex, exerciseIndex, videos };
+  }
+);
+
+export const updateRoutine = createAsyncThunk(
+  "routine/updateRoutine",
+  async (routine: Routine) => {
+    const response = await fetch(`/api/routines/${routine._id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(routine),
+    });
+    if (!response.ok) throw new Error("Failed to update routine");
+    return await response.json();
+  }
+);
+
 const routineSlice = createSlice({
   name: "routine",
   initialState,
@@ -148,6 +197,30 @@ const routineSlice = createSlice({
       .addCase(addRoutine.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      .addCase(deleteRoutine.fulfilled, (state, action) => {
+        state.routines.splice(action.payload, 1);
+        state.selectedRoutineIndex = state.routines.length > 0 ? 0 : null;
+      }).addCase(setExerciseVideos.fulfilled, (state, action) => {
+        const { routineId, dayIndex, exerciseIndex, videos } = action.payload;
+        const routine = state.routines.find((r) => r._id === routineId);
+        if (routine) {
+          routine.days[dayIndex].exercises[exerciseIndex].videos = videos;
+        }
+      }).addCase(updateRoutine.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(updateRoutine.fulfilled, (state, action) => {
+        state.loading = false;
+        const updatedRoutine = action.payload;
+        const index = state.routines.findIndex((r) => r._id === updatedRoutine._id);
+        if (index !== -1) {
+          state.routines[index] = updatedRoutine;
+        }
+      })
+      .addCase(updateRoutine.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || "Error updating routine";
       });
   },
 });

@@ -3,6 +3,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "../store";
 import { loginUser, registerUser } from "../store/userSlice";
 import { useRouter } from "next/router";
+import Button from "../components/Button";
+import Input from "../components/Input";
 
 export default function Home() {
   const dispatch = useDispatch<AppDispatch>();
@@ -35,45 +37,38 @@ export default function Home() {
         <h1 className="text-xl font-semibold mb-4">{isRegister ? "Registrarse" : "Iniciar Sesión"}</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           {isRegister && (
-            <input
+            <Input
               name="username"
               placeholder="Nombre de usuario"
               value={formData.username}
               onChange={handleChange}
-              className="w-full p-2 bg-[#1A1A1A] border border-[#4A4A4A] rounded text-white placeholder-[#B0B0B0] focus:outline-none focus:ring-1 focus:ring-[#34C759]"
             />
           )}
-          <input
+          <Input
             name="email"
             type="email"
             placeholder="Email"
             value={formData.email}
             onChange={handleChange}
-            className="w-full p-2 bg-[#1A1A1A] border border-[#4A4A4A] rounded text-white placeholder-[#B0B0B0] focus:outline-none focus:ring-1 focus:ring-[#34C759]"
           />
-          <input
+          <Input
             name="password"
             type="password"
             placeholder="Contraseña"
             value={formData.password}
             onChange={handleChange}
-            className="w-full p-2 bg-[#1A1A1A] border border-[#4A4A4A] rounded text-white placeholder-[#B0B0B0] focus:outline-none focus:ring-1 focus:ring-[#34C759]"
           />
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[#34C759] text-black py-2 rounded hover:bg-[#2DBF4E] transition-colors disabled:opacity-50"
-          >
+          <Button disabled={loading}>
             {loading ? "Cargando..." : isRegister ? "Registrarse" : "Iniciar Sesión"}
-          </button>
+          </Button>
         </form>
         <button
           onClick={() => setIsRegister(!isRegister)}
-          className="mt-2 text-[#B0B0B0] text-sm hover:text-[#34C759]"
+          className="mt-2 text-[#B0B0B0] text-sm hover:text-[#34C759] w-full text-center"
         >
           {isRegister ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate"}
         </button>
-        {error && <p className="text-red-500 mt-2">{error}</p>}
+        {error && <p className="text-red-500 mt-2 text-center">{error}</p>}
       </div>
     </div>
   );

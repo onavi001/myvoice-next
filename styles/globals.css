@@ -2,10 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Ocultar scrollbar en elementos con overflow-x-auto */
 .scrollbar-hidden::-webkit-scrollbar {
   display: none;
 }
 .scrollbar-hidden {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }

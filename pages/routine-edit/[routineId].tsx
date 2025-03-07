@@ -1,45 +1,65 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { RootState, AppDispatch } from "../store";
-import { addRoutine } from "../store/routineSlice";
+import { RootState, AppDispatch } from "../../store";
+import { updateRoutine, fetchRoutines } from "../../store/routineSlice";
 import { useRouter } from "next/router";
 import { GetServerSideProps } from "next";
 import jwt from "jsonwebtoken";
 
-const RoutineFormPage = () => {
+const RoutineEditPage = ({ routineId }: { routineId: string }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const { user, loading: userLoading } = useSelector((state: RootState) => state.user);
+  const { user, loading: userLoading, error: userError } = useSelector((state: RootState) => state.user);
+  const { routines, loading: routineLoading } = useSelector((state: RootState) => state.routine);
   const router = useRouter();
+  const selectedRoutine = routines.find((r) => r._id === routineId) || null;
 
-  interface Exercise {
-    name: string;
-    muscleGroup: string;
-    sets: number;
-    reps: number;
-    weight: string;
-    rest: string;
-    tips: string[];
-    completed: boolean;
-    videos: { url: string; isCurrent: boolean }[];
-  }
-  
-  interface Day {
-    dayName: string;
-    exercises: Exercise[];
-    musclesWorked: string[];
-    warmupOptions: string[];
-    explanation: string;
-  }
-  
-  const [formData, setFormData] = useState<{
-    name: string;
-    days: Day[];
-  }>({
-    name: "",
-    days: [{ dayName: "", exercises: [], musclesWorked: [], warmupOptions: [], explanation: "" }],
-  });
-  const [expandedDay, setExpandedDay] = useState<number | null>(null);
+  const [formData, setFormData] = useState({
+      name: "",
+      days: [
+        {
+          dayName: "",
+          exercises: [
+            { name: "", sets: 0, reps: 0, weight: "", rest: "", tips: ["", ""], completed: false, muscleGroup: "", videos: [{ url: "", isCurrent: false }] },
+          ],
+          musclesWorked: [] as string[],
+          warmupOptions: [] as string[],
+          explanation: "",
+        },
+      ],
+    });
+  const [expandedDay, setExpandedDay] = useState<number | null>(0);
   const [expandedExercises, setExpandedExercises] = useState<Record<number, number[]>>({});
+
+  useEffect(() => {
+    if (user && routines.length === 0) {
+      dispatch(fetchRoutines());
+    }
+  }, [dispatch, user, routines]);
+
+  useEffect(() => {
+    if (selectedRoutine) {
+      setFormData({
+        name: selectedRoutine.name,
+        days: selectedRoutine.days.map((day) => ({
+          dayName: day.dayName,
+          exercises: day.exercises.map((ex) => ({
+            name: ex.name,
+            sets: ex.sets,
+            reps: ex.reps,
+            weight: ex.weight,
+            rest: ex.rest || "",
+            tips: ex.tips || ["", ""],
+            completed: ex.completed,
+            muscleGroup: ex.muscleGroup,
+            videos: ex.videos || [{ url: "", isCurrent: false }],
+          })),
+          musclesWorked: day.musclesWorked,
+          warmupOptions: day.warmupOptions,
+          explanation: day.explanation,
+        })),
+      });
+    }
+  }, [selectedRoutine]);
 
   const handleRoutineChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -128,41 +148,31 @@ const RoutineFormPage = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
-    const routine = {
-      name: formData.name,
-      days: formData.days.map((day) => ({
-        dayName: day.dayName,
-        exercises: day.exercises.map((ex) => ({
-          name: ex.name,
-          muscleGroup: ex.muscleGroup,
-          sets: ex.sets,
-          reps: ex.reps,
-          weight: ex.weight,
-          rest: ex.rest,
-          tips: ex.tips.filter((tip) => tip.trim() !== ""),
-          completed: ex.completed,
-          videos: ex.videos,
-        })),
-        musclesWorked: day.musclesWorked.filter((m) => m.trim() !== ""),
-        warmupOptions: day.warmupOptions.filter((w) => w.trim() !== ""),
-        explanation: day.explanation,
-      })),
-      userId: user._id,
-    };
-    dispatch(addRoutine(routine));
-    router.push("/routine");
+    if (!user || !selectedRoutine) return;
+    try {
+      await dispatch(updateRoutine({
+          ...formData,
+          _id: selectedRoutine._id,
+          userId: user._id,
+          createdAt: "",
+          updatedAt: ""
+      })).unwrap();
+      router.push("/routine");
+    } catch (error) {
+      console.error("Error updating routine:", error);
+    }
   };
 
-  if (userLoading) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Cargando...</div>;
-  if (!user) return null;
+  if (userLoading || routineLoading) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Cargando...</div>;
+  if (userError) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Error: {userError}</div>;
+  if (!user || !selectedRoutine) return null;
 
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
       <div className="p-4 max-w-md mx-auto flex-1 overflow-y-auto mt-16">
-        <h2 className="text-sm font-sans font-semibold text-white mb-4 truncate">Agregar Rutina Manual</h2>
+        <h2 className="text-sm font-sans font-semibold text-white mb-4 truncate">Editar Rutina</h2>
         <form onSubmit={handleSubmit} className="space-y-2">
           <input
             name="name"
@@ -352,15 +362,18 @@ const RoutineFormPage = () => {
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const token = context.req.cookies.token;
+  const { routineId } = context.params as { routineId: string };
+
   if (!token) {
     return { redirect: { destination: "/", permanent: false } };
   }
+
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "my-super-secret-key") as { userId: string };
-    return { props: {} };
+    return { props: { routineId } };
   } catch (error) {
     return { redirect: { destination: "/", permanent: false } };
   }
 };
 
-export default RoutineFormPage;
+export default RoutineEditPage;

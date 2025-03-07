@@ -1,35 +1,31 @@
-import { Schema, model, Document, Types, Model } from "mongoose";
+// models/Progress.ts
+import mongoose, { Schema, Document } from "mongoose";
 
-interface IProgress extends Document {
-  userId: Types.ObjectId;
-  routineId: Types.ObjectId;
-  dayId: string;
-  exerciseId: string;
+export interface IProgress extends Document {
+  routineId: string;
+  dayIndex: number;
+  exerciseIndex: number;
   sets: number;
   reps: number;
   weight: string;
   notes: string;
-  date: Date;
+  date: string;
+  userId: string;
 }
 
-const ProgressSchema: Schema = new Schema<IProgress>({
-  userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-  routineId: { type: Schema.Types.ObjectId, ref: "Routine", required: true },
-  dayId: { type: String, required: true },
-  exerciseId: { type: String, required: true },
-  sets: { type: Number },
-  reps: { type: Number },
-  weight: { type: String },
-  notes: { type: String },
-  date: { type: Date, default: Date.now },
-});
+const ProgressSchema: Schema = new Schema(
+  {
+    routineId: { type: String, required: true },
+    dayIndex: { type: Number, required: true },
+    exerciseIndex: { type: Number, required: true },
+    sets: { type: Number, required: true },
+    reps: { type: Number, required: true },
+    weight: { type: String, required: true },
+    notes: { type: String, default: "" },
+    date: { type: String, required: true },
+    userId: { type: String, required: true },
+  },
+  { timestamps: true }
+);
 
-let ProgressModel: Model<IProgress>;
-
-try {
-  ProgressModel = model<IProgress>("Progress", ProgressSchema);
-} catch (e) {
-  ProgressModel = model<IProgress>("Progress", ProgressSchema, undefined, { overwriteModels: true });
-}
-
-export default ProgressModel;
+export default mongoose.models.Progress || mongoose.model<IProgress>("Progress", ProgressSchema);

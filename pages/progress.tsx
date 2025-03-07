@@ -1,148 +1,492 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../store";
-import { fetchProgress, addProgressEntry } from "../store/progressSlice";
+import { addProgress, editProgress, deleteProgress, clearProgress, fetchProgress } from "../store/progressSlice";
+import { logout, fetchRoutines } from "../store/routineSlice";
 import { useRouter } from "next/router";
 import { GetServerSideProps } from "next";
 import jwt from "jsonwebtoken";
-import {dbConnect} from "../lib/mongodb";
-import Progress from "../models/progress";
+import Navbar from "../components/Navbar";
+import Toast from "../components/Toast";
+import { Line } from "react-chartjs-2";
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from "chart.js";
 
-export default function ProgressPage({ initialProgress }: { initialProgress: any[] }) {
+// Registrar componentes de Chart.js
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+
+const ProgressPage = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { progress, loading, error } = useSelector((state: RootState) => state.progress);
   const { user, loading: userLoading } = useSelector((state: RootState) => state.user);
-  const { routines } = useSelector((state: RootState) => state.routine);
+  const { routines, loading: routinesLoading } = useSelector((state: RootState) => state.routine);
+  const { progress, loading: progressLoading } = useSelector((state: RootState) => state.progress);
   const router = useRouter();
+
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [expandedCardKey, setExpandedCardKey] = useState<string | null>(null);
+  const [showChart, setShowChart] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [editData, setEditData] = useState<Record<string, any>>({});
+  const [showAddForm, setShowAddForm] = useState<boolean>(false);
   const [newProgress, setNewProgress] = useState({
     routineId: "",
-    dayId: "0",
-    exerciseId: "0",
+    dayIndex: 0,
+    exerciseIndex: 0,
     sets: 0,
     reps: 0,
     weight: "",
     notes: "",
+    date: new Date().toISOString().split("T")[0],
+  });
+  const itemsPerPage = 5;
+
+  // Fetch inicial de datos
+  useEffect(() => {
+    if (user) {
+      if (routines.length === 0) dispatch(fetchRoutines());
+      if (progress.length === 0) dispatch(fetchProgress());
+    }
+  }, [dispatch, user, routines.length, progress.length]);
+
+  const handleBack = () => router.push("/routine");
+
+  const handleClear = () => {
+    dispatch(clearProgress());
+    setToastMessage("Progreso limpiado correctamente");
+  };
+
+  const handleCloseToast = () => setToastMessage(null);
+
+  const toggleExpandCard = (key: string) => {
+    setExpandedCardKey((prev) => (prev === key ? null : key));
+  };
+
+  const handleEditChange = (cardKey: string, field: string, value: string | number) => {
+    setEditData((prev) => ({
+      ...prev,
+      [cardKey]: { ...prev[cardKey], [field]: value },
+    }));
+  };
+
+  const handleSaveEdit = async (cardKey: string, entry: any) => {
+    const updatedEntry = { ...entry, ...editData[cardKey] };
+    if (updatedEntry.date && !updatedEntry.date.includes("T")) {
+      updatedEntry.date = `${updatedEntry.date}T00:00:00Z`;
+    }
+    await dispatch(editProgress({ cardKey, updatedEntry })).unwrap();
+    setToastMessage("Progreso actualizado correctamente");
+    setEditData((prev) => {
+      const newData = { ...prev };
+      delete newData[cardKey];
+      return newData;
+    });
+  };
+
+  const handleDelete = async (cardKey: string) => {
+    await dispatch(deleteProgress(cardKey)).unwrap();
+    setToastMessage("Progreso eliminado correctamente");
+    setExpandedCardKey(null);
+  };
+
+  const handleAddChange = (field: string, value: string | number) => {
+    setNewProgress((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    const fullDate = `${newProgress.date}T00:00:00Z`;
+    await dispatch(addProgress({ ...newProgress, date: fullDate, userId: user._id })).unwrap();
+    setToastMessage("Progreso agregado correctamente");
+    setShowAddForm(false);
+    setNewProgress({
+      routineId: routines[0]?._id || "",
+      dayIndex: 0,
+      exerciseIndex: 0,
+      sets: 0,
+      reps: 0,
+      weight: "",
+      notes: "",
+      date: new Date().toISOString().split("T")[0],
+    });
+  };
+
+  const filteredProgress = progress.filter((entry) => {
+    const routine = routines.find((r) => r._id === entry.routineId);
+    const day = routine?.days[entry.dayIndex];
+    const exercise = day?.exercises[entry.exerciseIndex];
+    const query = searchQuery.toLowerCase();
+    return (
+      !query ||
+      routine?.name.toLowerCase().includes(query) ||
+      day?.dayName.toLowerCase().includes(query) ||
+      exercise?.name.toLowerCase().includes(query) ||
+      exercise?.muscleGroup.toLowerCase().includes(query)
+    );
   });
 
-  useEffect(() => {
-    console.log("User:", user, "User Loading:", userLoading, "Progress:", progress);
-    if (!user && !userLoading) {
-      console.log("No user, redirecting to /");
-      router.push("/");
-    } else if (user && progress.length === 0) {
-      console.log("Fetching progress for user");
-      dispatch(fetchProgress());
-      if (routines.length > 0 && !newProgress.routineId) {
-        setNewProgress((prev) => ({ ...prev, routineId: routines[0]._id }));
-      }
-    }
-  }, [dispatch, user, userLoading, router]);
+  // Paginación
+  const totalPages = Math.ceil(filteredProgress.length / itemsPerPage);
+  const paginatedProgress = filteredProgress.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setNewProgress((prev) => ({ ...prev, [name]: name === "sets" || name === "reps" ? Number(value) : value }));
+  // Datos para la gráfica (peso por fecha)
+  const chartData = {
+    labels: filteredProgress.map((entry) => new Date(entry.date).toLocaleDateString()),
+    datasets: [
+      {
+        label: "Peso (kg)",
+        data: filteredProgress.map((entry) => parseFloat(entry.weight) || 0),
+        borderColor: "#34C759",
+        backgroundColor: "rgba(52, 199, 89, 0.2)",
+        fill: true,
+      },
+    ],
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (user) {
-      console.log("Adding progress:", newProgress);
-      dispatch(addProgressEntry({ ...newProgress, userId: user._id }));
-      setNewProgress({
-        routineId: routines.length > 0 ? routines[0]._id : "",
-        dayId: "0",
-        exerciseId: "0",
-        sets: 0,
-        reps: 0,
-        weight: "",
-        notes: "",
-      });
-    }
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      title: { display: true, text: "Progreso", color: "#FFFFFF", font: { size: 12 } },
+    },
+    scales: {
+      x: { ticks: { color: "#B0B0B0", font: { size: 10 } } },
+      y: { ticks: { color: "#B0B0B0", font: { size: 10 } } },
+    },
   };
 
-  if (userLoading || loading) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Cargando...</div>;
-  if (error) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Error: {error}</div>;
+  if (userLoading || routinesLoading || progressLoading) {
+    return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Cargando...</div>;
+  }
   if (!user) return null;
 
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
-      <div className="p-4 max-w-md mx-auto flex-1">
-        <h1 className="text-xl font-semibold mb-4">Progreso</h1>
-        <form onSubmit={handleSubmit} className="bg-[#2D2D2D] p-4 rounded-lg shadow-sm mb-4 space-y-2">
+      <style>
+        {`
+          .scrollbar-hidden::-webkit-scrollbar {
+            display: none;
+          }
+          .scrollbar-hidden {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+        `}
+      </style>
+
+      {/* Barra superior fija */}
+      <div className="bg-[#1A1A1A] p-2 shadow-sm z-30 mt-16">
+        <div className="max-w-md mx-auto">
           <input
-            name="sets"
-            type="number"
-            placeholder="Series"
-            value={newProgress.sets}
-            onChange={handleInputChange}
-            className="w-full p-2 bg-[#1A1A1A] border border-[#4A4A4A] rounded text-white text-xs placeholder-[#B0B0B0] focus:outline-none focus:ring-1 focus:ring-[#34C759]"
+            type="text"
+            placeholder="Buscar (músculo, ejercicio...)"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full p-2 border border-[#4A4A4A] rounded bg-[#2D2D2D] text-white text-xs placeholder-[#B0B0B0] focus:outline-none focus:ring-1 focus:ring-[#34C759]"
           />
-          <input
-            name="reps"
-            type="number"
-            placeholder="Repeticiones"
-            value={newProgress.reps}
-            onChange={handleInputChange}
-            className="w-full p-2 bg-[#1A1A1A] border border-[#4A4A4A] rounded text-white text-xs placeholder-[#B0B0B0] focus:outline-none focus:ring-1 focus:ring-[#34C759]"
-          />
-          <input
-            name="weight"
-            placeholder="Peso"
-            value={newProgress.weight}
-            onChange={handleInputChange}
-            className="w-full p-2 bg-[#1A1A1A] border border-[#4A4A4A] rounded text-white text-xs placeholder-[#B0B0B0] focus:outline-none focus:ring-1 focus:ring-[#34C759]"
-          />
-          <textarea
-            name="notes"
-            placeholder="Notas"
-            value={newProgress.notes}
-            onChange={handleInputChange}
-            className="w-full p-2 bg-[#1A1A1A] border border-[#4A4A4A] rounded text-white text-xs placeholder-[#B0B0B0] focus:outline-none focus:ring-1 focus:ring-[#34C759]"
-          />
-          <button
-            type="submit"
-            className="w-full bg-[#34C759] text-black py-2 rounded hover:bg-[#2DBF4E] text-xs"
-          >
-            Agregar Progreso
-          </button>
-        </form>
-        <ul className="space-y-2">
-          {progress.map((entry) => (
-            <li key={entry._id} className="bg-[#2D2D2D] rounded-lg shadow-sm p-2">
-              <p className="text-sm">Ejercicio: {entry.exerciseId}</p>
-              <p className="text-xs text-[#B0B0B0]">Series: {entry.sets}, Reps: {entry.reps}, Peso: {entry.weight}</p>
-              <p className="text-xs text-[#B0B0B0]">Notas: {entry.notes}</p>
-              <p className="text-xs text-[#B0B0B0]">Fecha: {new Date(entry.date).toLocaleDateString()}</p>
-            </li>
-          ))}
-        </ul>
+          <div className="flex justify-between mt-2">
+            <label className="flex items-center text-[#B0B0B0] text-xs">
+              <input
+                type="checkbox"
+                checked={showChart}
+                onChange={() => setShowChart(!showChart)}
+                className="mr-2"
+              />
+              Ver gráfica
+            </label>
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="bg-[#34C759] text-black px-2 py-1 rounded text-xs hover:bg-[#2DBF4E]"
+            >
+              Agregar Progreso
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Contenido con margen superior ajustado */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-4 max-w-md mx-auto">
+          {/* Gráfica */}
+          {showChart && filteredProgress.length > 0 && (
+            <div className="mb-4 bg-[#2D2D2D] p-2 rounded-lg shadow-sm h-32 relative z-0">
+              <Line data={chartData} options={chartOptions} />
+            </div>
+          )}
+
+          {/* Lista de progreso */}
+          {filteredProgress.length === 0 ? (
+            <p className="text-[#B0B0B0] text-xs mt-2">No hay progreso registrado con este filtro.</p>
+          ) : (
+            <>
+              <ul className="space-y-2">
+                {paginatedProgress.map((entry) => {
+                  const routine = routines.find((r) => r._id === entry.routineId);
+                  const day = routine?.days[entry.dayIndex];
+                  const exercise = day?.exercises[entry.exerciseIndex];
+                  const cardKey = `${entry.routineId}-${entry.dayIndex}-${entry.exerciseIndex}-${entry.date}`;
+                  const isExpanded = expandedCardKey === cardKey;
+                  const edited = editData[cardKey] || {};
+                  const currentEntry = { ...entry, ...edited };
+
+                  return (
+                    <li
+                      key={cardKey}
+                      className="bg-[#2D2D2D] rounded-lg shadow-sm overflow-hidden"
+                    >
+                      <button
+                        onClick={() => toggleExpandCard(cardKey)}
+                        className="w-full flex justify-between items-center p-2 text-left hover:bg-[#4A4A4A] transition-colors"
+                      >
+                        <span className="text-xs font-sans font-semibold text-white truncate">
+                          {exercise?.name || "Ejercicio desconocido"}
+                        </span>
+                        <span className="text-[#B0B0B0] text-xs">{isExpanded ? "▲" : "▼"}</span>
+                      </button>
+                      {isExpanded && (
+                        <div className="p-2 bg-[#4A4A4A] text-xs space-y-1 relative z-0">
+                          <p className="text-[#FFFFFF]">
+                            {routine?.name || "Rutina desconocida"} - {day?.dayName || "Día desconocido"}
+                          </p>
+                          <p className="text-[#B0B0B0]">Músculo: {exercise?.muscleGroup || "Desconocido"}</p>
+                          <div className="grid grid-cols-2 gap-1">
+                            <div>
+                              <label className="text-[#B0B0B0]">Fecha:</label>
+                              <input
+                                type="date"
+                                value={currentEntry.date.split("T")[0]}
+                                onChange={(e) => handleEditChange(cardKey, "date", e.target.value)}
+                                className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs focus:outline-none focus:ring-1 focus:ring-[#34C759]"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[#B0B0B0]">Series:</label>
+                              <input
+                                type="number"
+                                value={currentEntry.sets}
+                                onChange={(e) => handleEditChange(cardKey, "sets", Number(e.target.value))}
+                                className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs focus:outline-none focus:ring-1 focus:ring-[#34C759]"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[#B0B0B0]">Reps:</label>
+                              <input
+                                type="number"
+                                value={currentEntry.reps}
+                                onChange={(e) => handleEditChange(cardKey, "reps", Number(e.target.value))}
+                                className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs focus:outline-none focus:ring-1 focus:ring-[#34C759]"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[#B0B0B0]">Peso:</label>
+                              <input
+                                type="text"
+                                value={currentEntry.weight}
+                                onChange={(e) => handleEditChange(cardKey, "weight", e.target.value)}
+                                className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs focus:outline-none focus:ring-1 focus:ring-[#34C759]"
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              <label className="text-[#B0B0B0]">Notas:</label>
+                              <textarea
+                                value={currentEntry.notes || ""}
+                                onChange={(e) => handleEditChange(cardKey, "notes", e.target.value)}
+                                className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs h-8 resize-none focus:outline-none focus:ring-1 focus:ring-[#34C759]"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex space-x-2 mt-2">
+                            <button
+                              onClick={() => handleSaveEdit(cardKey, entry)}
+                              className="w-full bg-[#34C759] text-black py-1 rounded hover:bg-[#2DBF4E] text-xs"
+                            >
+                              Guardar
+                            </button>
+                            <button
+                              onClick={() => handleDelete(cardKey)}
+                              className="w-full bg-red-600 text-white py-1 rounded hover:bg-red-700 text-xs"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {/* Paginación */}
+              {totalPages > 1 && (
+                <div className="mt-4 flex justify-between items-center">
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 bg-[#4A4A4A] text-[#B0B0B0] rounded-full disabled:opacity-50 text-xs"
+                  >
+                    ◄
+                  </button>
+                  <span className="text-[#B0B0B0] text-xs">
+                    {currentPage}/{totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 bg-[#4A4A4A] text-[#B0B0B0] rounded-full disabled:opacity-50 text-xs"
+                  >
+                    ►
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Formulario para agregar progreso */}
+      {showAddForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40">
+          <div className="bg-[#2D2D2D] p-4 rounded-lg max-w-md w-full">
+            <h3 className="text-sm font-semibold text-white mb-2">Agregar Progreso</h3>
+            <form onSubmit={handleAddSubmit} className="space-y-2">
+              <div>
+                <label className="text-[#B0B0B0] text-xs">Rutina:</label>
+                <select
+                  value={newProgress.routineId}
+                  onChange={(e) => handleAddChange("routineId", e.target.value)}
+                  className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs"
+                >
+                  {routines.map((routine) => (
+                    <option key={routine._id} value={routine._id}>{routine.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[#B0B0B0] text-xs">Día:</label>
+                <select
+                  value={newProgress.dayIndex}
+                  onChange={(e) => handleAddChange("dayIndex", Number(e.target.value))}
+                  className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs"
+                >
+                  {routines.find((r) => r._id === newProgress.routineId)?.days.map((day, idx) => (
+                    <option key={idx} value={idx}>{day.dayName}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[#B0B0B0] text-xs">Ejercicio:</label>
+                <select
+                  value={newProgress.exerciseIndex}
+                  onChange={(e) => handleAddChange("exerciseIndex", Number(e.target.value))}
+                  className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs"
+                >
+                  {routines.find((r) => r._id === newProgress.routineId)?.days[newProgress.dayIndex]?.exercises.map((exercise, idx) => (
+                    <option key={idx} value={idx}>{exercise.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[#B0B0B0] text-xs">Series:</label>
+                <input
+                  type="number"
+                  value={newProgress.sets}
+                  onChange={(e) => handleAddChange("sets", Number(e.target.value))}
+                  className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs"
+                />
+              </div>
+              <div>
+                <label className="text-[#B0B0B0] text-xs">Reps:</label>
+                <input
+                  type="number"
+                  value={newProgress.reps}
+                  onChange={(e) => handleAddChange("reps", Number(e.target.value))}
+                  className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs"
+                />
+              </div>
+              <div>
+                <label className="text-[#B0B0B0] text-xs">Peso:</label>
+                <input
+                  type="text"
+                  value={newProgress.weight}
+                  onChange={(e) => handleAddChange("weight", e.target.value)}
+                  className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs"
+                />
+              </div>
+              <div>
+                <label className="text-[#B0B0B0] text-xs">Notas:</label>
+                <textarea
+                  value={newProgress.notes}
+                  onChange={(e) => handleAddChange("notes", e.target.value)}
+                  className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs h-8 resize-none"
+                />
+              </div>
+              <div>
+                <label className="text-[#B0B0B0] text-xs">Fecha:</label>
+                <input
+                  type="date"
+                  value={newProgress.date}
+                  onChange={(e) => handleAddChange("date", e.target.value)}
+                  className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs"
+                />
+              </div>
+              <div className="flex space-x-2">
+                <button type="submit" className="w-full bg-[#34C759] text-black py-1 rounded text-xs hover:bg-[#2DBF4E]">
+                  Guardar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(false)}
+                  className="w-full bg-[#4A4A4A] text-white py-1 rounded text-xs hover:bg-[#5A5A5A]"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Botón flotante para limpiar */}
+      <div className="fixed bottom-4 right-4 z-10">
         <button
-          onClick={() => router.push("/routine")}
-          className="fixed bottom-4 left-4 bg-[#34C759] text-black py-2 px-4 rounded hover:bg-[#2DBF4E]"
+          onClick={handleClear}
+          className="bg-red-600 text-white p-3 rounded-full shadow-lg hover:bg-red-700 transition-colors"
         >
-          Volver a Rutinas
+          🗑️
         </button>
       </div>
+
+      {/* Botón de volver */}
+      <div className="fixed bottom-4 left-4 z-10">
+        <button
+          onClick={handleBack}
+          className="bg-white text-black p-3 rounded-full shadow-lg hover:bg-[#E0E0E0] transition-colors"
+        >
+          ←
+        </button>
+      </div>
+
+      {/* Notificación Toast */}
+      {toastMessage && <Toast message={toastMessage} onClose={handleCloseToast} />}
     </div>
   );
-}
+};
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const token = context.req.cookies.token;
   if (!token) {
-    console.log("No token found, redirecting to /");
     return { redirect: { destination: "/", permanent: false } };
   }
-
   try {
-    await dbConnect();
-    const Progress = (await import("../models/progress")).default;
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "my-super-secret-key") as { userId: string };
-    const progress = await Progress.find({ userId: decoded.userId }).lean();
-    console.log("Progress fetched:", progress);
-    return { props: { initialProgress: JSON.parse(JSON.stringify(progress)) } };
+    return { props: {} };
   } catch (error) {
-    console.error("Error in getServerSideProps:", error);
     return { redirect: { destination: "/", permanent: false } };
   }
 };
+
+export default ProgressPage;
