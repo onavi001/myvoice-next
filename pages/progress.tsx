@@ -189,7 +189,6 @@ export default function ProgressPage() {
               Ver gráfica
             </label>
             <Button
-              variant="secondary"
               onClick={() => setShowAddForm(true)}
               className="bg-[#66BB6A] text-black hover:bg-[#4CAF50] rounded-md py-1 px-2 text-xs font-semibold border border-[#4CAF50] shadow-md"
             >
@@ -290,14 +289,13 @@ export default function ProgressPage() {
                           </div>
                           <div className="flex space-x-2 mt-2">
                             <Button
-                              variant="secondary"
+                              
                               onClick={() => handleSaveEdit(cardKey)}
                               className="w-full bg-[#66BB6A] text-black hover:bg-[#4CAF50] rounded-md py-1 px-2 text-xs font-semibold border border-[#4CAF50] shadow-md"
                             >
                               Guardar
                             </Button>
                             <Button
-                              variant="secondary"
                               onClick={() => handleDelete(cardKey)}
                               className="w-full bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md"
                             >
@@ -314,7 +312,6 @@ export default function ProgressPage() {
               {totalPages > 1 && (
                 <div className="mt-4 flex justify-between items-center">
                   <Button
-                    variant="secondary"
                     onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
                     className="p-2 bg-[#4A4A4A] text-[#D1D1D1] rounded-full disabled:opacity-50 text-xs font-semibold border border-[#4A4A4A] shadow-md"
@@ -325,7 +322,6 @@ export default function ProgressPage() {
                     {currentPage}/{totalPages}
                   </span>
                   <Button
-                    variant="secondary"
                     onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
                     className="p-2 bg-[#4A4A4A] text-[#D1D1D1] rounded-full disabled:opacity-50 text-xs font-semibold border border-[#4A4A4A] shadow-md"
@@ -436,7 +432,6 @@ export default function ProgressPage() {
                   Guardar
                 </Button>
                 <Button
-                  variant="secondary"
                   type="button"
                   onClick={() => setShowAddForm(false)}
                   className="w-full bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md"

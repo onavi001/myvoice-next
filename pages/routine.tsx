@@ -124,8 +124,7 @@ export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
             reps: Number(updatedExercise.reps ?? currentExercise.reps),
             weight: updatedExercise.weight ?? currentExercise.weight ?? "",
             notes: updatedExercise.notes ?? currentExercise.notes ?? "",
-            userId: user._id as string,
-            date: new Date().toISOString(),
+            date: new Date(),
           })
         );
         // Actualizar el ejercicio en la base de datos
@@ -211,7 +210,7 @@ export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
           <h2 className="text-sm font-semibold text-white mb-3 truncate">Tu Rutina</h2>
           <p className="text-[#B0B0B0] text-xs">No hay rutinas generadas. Genera una desde la página principal.</p>
           <Button onClick={() => router.push("/routine-form")} className="mt-3">Agregar Rutina Manual</Button>
-          <Button variant="secondary" onClick={() => router.push("/")} className="mt-3">Volver</Button>
+          <Button onClick={() => router.push("/")} className="mt-3">Volver</Button>
         </div>
       </div>
     );
@@ -340,19 +339,19 @@ export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
                               onClick={() =>
                                 handleChangeVideo("prev", selectedRoutineIndex, selectedDayIndex, exerciseIndex)
                               }
-                              className="px-2 py-1 text-xs"
-                              variant="secondary"
+                              className="bg-transparent hover:bg-transparent text-white px-2 py-1 text-xs"
+                              
                             >
-                              Anterior
+                              {"<<Anterior"}
                             </Button>
                             <Button
                               onClick={() =>
                                 handleChangeVideo("next", selectedRoutineIndex, selectedDayIndex, exerciseIndex)
                               }
-                              className="px-2 py-1 text-xs"
+                              className="bg-transparent hover:bg-transparent text-white px-2 py-1 text-xs"
                               variant="secondary"
                             >
-                              Siguiente
+                              {"Siguiente>>"}
                             </Button>
                           </div>
                         )}

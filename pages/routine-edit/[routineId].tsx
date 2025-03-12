@@ -233,7 +233,6 @@ export default function RoutineEditPage({ routine: initialRoutine }: RoutineEdit
               {loading ? "Guardando..." : "Guardar"}
             </Button>
             <Button
-              variant="secondary"
               type="button"
               onClick={() => router.push("/routine")}
               className="w-1/2 bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md"

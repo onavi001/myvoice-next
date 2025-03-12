@@ -92,7 +92,7 @@ export default function RoutineFormPage() {
   };
 
   if (userLoading) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Cargando...</div>;
-  if (!user) return router.push("/");
+  //if (!user) return router.push("/");
 
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
@@ -213,10 +213,9 @@ export default function RoutineFormPage() {
               {loading ? "Creando..." : "Crear"}
             </Button>
             <Button
-              variant="secondary"
               type="button"
               onClick={() => router.push("/routine")}
-              className="w-1/2 bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md"
+              className="w-1/2 bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md disabled:bg-[#4CAF50] disabled:opacity-50"
             >
               Cancelar
             </Button>
