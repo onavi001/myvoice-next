@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import jwt from "jsonwebtoken";
 import {dbConnect} from "../../lib/mongodb";
-import User from "../../models/users";
+import User from "../../models/Users";
 
 const SECRET_KEY = process.env.JWT_SECRET || "my-super-secret-key";
 

@@ -15,7 +15,7 @@ export default function Home() {
 
   useEffect(() => {
     if (user) router.push("/routine");
-  }, [user, router]);
+  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

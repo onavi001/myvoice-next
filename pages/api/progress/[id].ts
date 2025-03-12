@@ -1,7 +1,7 @@
 // pages/api/progress/[id].ts
 import { NextApiRequest, NextApiResponse } from "next";
 import {dbConnect} from "../../../lib/mongodb";
-import Progress from "../../../models/progress";
+import Progress from "../../../models/Progress";
 import jwt from "jsonwebtoken";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

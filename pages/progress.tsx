@@ -1,24 +1,24 @@
-import { useState, useEffect } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { RootState, AppDispatch } from "../store";
-import { addProgress, editProgress, deleteProgress, clearProgress, fetchProgress } from "../store/progressSlice";
-import { logout, fetchRoutines } from "../store/routineSlice";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { GetServerSideProps } from "next";
-import jwt from "jsonwebtoken";
-import Navbar from "../components/Navbar";
+import { useSelector, useDispatch } from "react-redux";
+import { AppDispatch, RootState } from "../store";
+import { addProgress, editProgress, deleteProgress, clearProgress, fetchProgress } from "../store/progressSlice";
+import { fetchRoutines } from "../store/routineSlice";
+import Button from "../components/Button";
+import Input from "../components/Input";
+import Card from "../components/Card";
 import Toast from "../components/Toast";
 import { Line } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from "chart.js";
+import { ProgressData } from "../models/Progress";
 
-// Registrar componentes de Chart.js
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-const ProgressPage = () => {
+export default function ProgressPage() {
   const dispatch = useDispatch<AppDispatch>();
-  const { user, loading: userLoading } = useSelector((state: RootState) => state.user);
-  const { routines, loading: routinesLoading } = useSelector((state: RootState) => state.routine);
   const { progress, loading: progressLoading } = useSelector((state: RootState) => state.progress);
+  const { routines, loading: routineLoading } = useSelector((state: RootState) => state.routine);
+  const { user, loading: userLoading } = useSelector((state: RootState) => state.user);
   const router = useRouter();
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -26,33 +26,41 @@ const ProgressPage = () => {
   const [expandedCardKey, setExpandedCardKey] = useState<string | null>(null);
   const [showChart, setShowChart] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [editData, setEditData] = useState<Record<string, any>>({});
+  const [editData, setEditData] = useState<Record<string, Partial<ProgressData>>>({});
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
-  const [newProgress, setNewProgress] = useState({
-    routineId: "",
+  const [newProgress, setNewProgress] = useState<Omit<ProgressData, "_id" | "userId">>({
+    routineId: routines[0]?._id || "",
     dayIndex: 0,
     exerciseIndex: 0,
     sets: 0,
     reps: 0,
     weight: "",
     notes: "",
-    date: new Date().toISOString().split("T")[0],
+    date: new Date(),
   });
   const itemsPerPage = 5;
 
-  // Fetch inicial de datos
   useEffect(() => {
-    if (user) {
-      if (routines.length === 0) dispatch(fetchRoutines());
-      if (progress.length === 0) dispatch(fetchProgress());
+    if (user && !routines.length && !routineLoading) {
+      dispatch(fetchRoutines());
     }
-  }, [dispatch, user, routines.length, progress.length]);
+  }, [dispatch, user, progress, progressLoading]);
+
+  useEffect(() => {
+    if (user && !progress.length && !progressLoading) {
+      dispatch(fetchProgress());
+    }
+  }, [dispatch, user, routines, routineLoading]);
+  useEffect(() => {
+    if (!userLoading && !user) {
+      router.push("/");
+    }
+  }, [user, userLoading, router]);
 
   const handleBack = () => router.push("/routine");
 
   const handleClear = () => {
-    dispatch(clearProgress());
-    setToastMessage("Progreso limpiado correctamente");
+    dispatch(clearProgress()).then(() => setToastMessage("Progreso limpiado correctamente"));
   };
 
   const handleCloseToast = () => setToastMessage(null);
@@ -61,53 +69,55 @@ const ProgressPage = () => {
     setExpandedCardKey((prev) => (prev === key ? null : key));
   };
 
-  const handleEditChange = (cardKey: string, field: string, value: string | number) => {
+  const handleEditChange = (cardKey: string, field: keyof ProgressData, value: any) => {
     setEditData((prev) => ({
       ...prev,
-      [cardKey]: { ...prev[cardKey], [field]: value },
+      [cardKey]: { ...prev[cardKey], [field]: field === "date" ? new Date(value) : value },
     }));
   };
 
-  const handleSaveEdit = async (cardKey: string, entry: any) => {
-    const updatedEntry = { ...entry, ...editData[cardKey] };
-    if (updatedEntry.date && !updatedEntry.date.includes("T")) {
-      updatedEntry.date = `${updatedEntry.date}T00:00:00Z`;
-    }
-    await dispatch(editProgress({ cardKey, updatedEntry })).unwrap();
-    setToastMessage("Progreso actualizado correctamente");
-    setEditData((prev) => {
-      const newData = { ...prev };
-      delete newData[cardKey];
-      return newData;
+  const handleSaveEdit = (progressId: string) => {
+    const originalEntry = progress.find((p) => p._id === progressId);
+    const updatedEntry = { ...originalEntry, ...editData[progressId] } as ProgressData;
+    dispatch(editProgress({ progressId, updatedEntry })).then(() => {
+      setToastMessage("Progreso actualizado correctamente");
+      setEditData((prev) => {
+        const newData = { ...prev };
+        delete newData[progressId];
+        return newData;
+      });
     });
   };
 
-  const handleDelete = async (cardKey: string) => {
-    await dispatch(deleteProgress(cardKey)).unwrap();
-    setToastMessage("Progreso eliminado correctamente");
-    setExpandedCardKey(null);
+  const handleDelete = (progressId: string) => {
+    dispatch(deleteProgress(progressId)).then(() => {
+      setToastMessage("Progreso eliminado correctamente");
+      setExpandedCardKey(null);
+    });
   };
 
-  const handleAddChange = (field: string, value: string | number) => {
-    setNewProgress((prev) => ({ ...prev, [field]: value }));
+  const handleAddChange = (field: keyof Omit<ProgressData, "_id" | "userId">, value: any) => {
+    setNewProgress((prev) => ({
+      ...prev,
+      [field]: field === "date" ? new Date(value) : value,
+    }));
   };
 
-  const handleAddSubmit = async (e: React.FormEvent) => {
+  const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
-    const fullDate = `${newProgress.date}T00:00:00Z`;
-    await dispatch(addProgress({ ...newProgress, date: fullDate, userId: user._id })).unwrap();
-    setToastMessage("Progreso agregado correctamente");
-    setShowAddForm(false);
-    setNewProgress({
-      routineId: routines[0]?._id || "",
-      dayIndex: 0,
-      exerciseIndex: 0,
-      sets: 0,
-      reps: 0,
-      weight: "",
-      notes: "",
-      date: new Date().toISOString().split("T")[0],
+    dispatch(addProgress(newProgress)).then(() => {
+      setToastMessage("Progreso agregado correctamente");
+      setShowAddForm(false);
+      setNewProgress({
+        routineId: routines[0]?._id || "",
+        dayIndex: 0,
+        exerciseIndex: 0,
+        sets: 0,
+        reps: 0,
+        weight: "",
+        notes: "",
+        date: new Date(),
+      });
     });
   };
 
@@ -121,20 +131,18 @@ const ProgressPage = () => {
       routine?.name.toLowerCase().includes(query) ||
       day?.dayName.toLowerCase().includes(query) ||
       exercise?.name.toLowerCase().includes(query) ||
-      exercise?.muscleGroup.toLowerCase().includes(query)
+      exercise?.muscleGroup?.toLowerCase().includes(query)
     );
   });
 
-  // Paginación
   const totalPages = Math.ceil(filteredProgress.length / itemsPerPage);
   const paginatedProgress = filteredProgress.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
-  // Datos para la gráfica (peso por fecha)
   const chartData = {
-    labels: filteredProgress.map((entry) => new Date(entry.date).toLocaleDateString()),
+    labels: filteredProgress.map((entry) => entry.date.toLocaleDateString()),
     datasets: [
       {
         label: "Peso (kg)",
@@ -159,68 +167,48 @@ const ProgressPage = () => {
     },
   };
 
-  if (userLoading || routinesLoading || progressLoading) {
-    return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Cargando...</div>;
-  }
-  if (!user) return null;
+  if (userLoading || routineLoading || progressLoading) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Cargando...</div>;
 
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
-      <style>
-        {`
-          .scrollbar-hidden::-webkit-scrollbar {
-            display: none;
-          }
-          .scrollbar-hidden {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-          }
-        `}
-      </style>
+      <style>{`.scrollbar-hidden::-webkit-scrollbar { display: none; } .scrollbar-hidden { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
 
-      {/* Barra superior fija */}
-      <div className="bg-[#1A1A1A] p-2 shadow-sm z-30 mt-16">
+      <div className="bg-[#1A1A1A] p-2 shadow-sm z-30">
         <div className="max-w-md mx-auto">
-          <input
+          <Input
+            name="search"
             type="text"
             placeholder="Buscar (músculo, ejercicio...)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full p-2 border border-[#4A4A4A] rounded bg-[#2D2D2D] text-white text-xs placeholder-[#B0B0B0] focus:outline-none focus:ring-1 focus:ring-[#34C759]"
+            className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
           />
           <div className="flex justify-between mt-2">
-            <label className="flex items-center text-[#B0B0B0] text-xs">
-              <input
-                type="checkbox"
-                checked={showChart}
-                onChange={() => setShowChart(!showChart)}
-                className="mr-2"
-              />
+            <label className="flex items-center text-[#D1D1D1] text-xs">
+              <input type="checkbox" checked={showChart} onChange={() => setShowChart(!showChart)} className="mr-2 accent-[#34C759]" />
               Ver gráfica
             </label>
-            <button
+            <Button
+              variant="secondary"
               onClick={() => setShowAddForm(true)}
-              className="bg-[#34C759] text-black px-2 py-1 rounded text-xs hover:bg-[#2DBF4E]"
+              className="bg-[#66BB6A] text-black hover:bg-[#4CAF50] rounded-md py-1 px-2 text-xs font-semibold border border-[#4CAF50] shadow-md"
             >
-              Agregar Progreso
-            </button>
+              + Agregar Progreso
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Contenido con margen superior ajustado */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto scrollbar-hidden">
         <div className="p-4 max-w-md mx-auto">
-          {/* Gráfica */}
           {showChart && filteredProgress.length > 0 && (
-            <div className="mb-4 bg-[#2D2D2D] p-2 rounded-lg shadow-sm h-32 relative z-0">
+            <Card className="mb-4 bg-[#252525] border-2 border-[#4A4A4A] p-2 rounded-md h-32">
               <Line data={chartData} options={chartOptions} />
-            </div>
+            </Card>
           )}
 
-          {/* Lista de progreso */}
           {filteredProgress.length === 0 ? (
-            <p className="text-[#B0B0B0] text-xs mt-2">No hay progreso registrado con este filtro.</p>
+            <p className="text-[#D1D1D1] text-xs mt-2">No hay progreso registrado con este filtro.</p>
           ) : (
             <>
               <ul className="space-y-2">
@@ -228,118 +216,122 @@ const ProgressPage = () => {
                   const routine = routines.find((r) => r._id === entry.routineId);
                   const day = routine?.days[entry.dayIndex];
                   const exercise = day?.exercises[entry.exerciseIndex];
-                  const cardKey = `${entry.routineId}-${entry.dayIndex}-${entry.exerciseIndex}-${entry.date}`;
+                  const cardKey = entry._id;
                   const isExpanded = expandedCardKey === cardKey;
                   const edited = editData[cardKey] || {};
-                  const currentEntry = { ...entry, ...edited };
+                  const currentEntry = { ...entry, ...edited } as ProgressData;
 
                   return (
-                    <li
-                      key={cardKey}
-                      className="bg-[#2D2D2D] rounded-lg shadow-sm overflow-hidden"
-                    >
-                      <button
+                    <Card key={cardKey} className="bg-[#252525] border-2 border-[#4A4A4A] rounded-md overflow-hidden">
+                      <div
+                        className="flex justify-between items-center p-2 cursor-pointer hover:bg-[#3A3A3A] transition-colors"
                         onClick={() => toggleExpandCard(cardKey)}
-                        className="w-full flex justify-between items-center p-2 text-left hover:bg-[#4A4A4A] transition-colors"
                       >
-                        <span className="text-xs font-sans font-semibold text-white truncate">
+                        <span className="text-xs font-semibold text-white truncate">
                           {exercise?.name || "Ejercicio desconocido"}
                         </span>
-                        <span className="text-[#B0B0B0] text-xs">{isExpanded ? "▲" : "▼"}</span>
-                      </button>
+                        <span className="text-[#D1D1D1] text-xs">{isExpanded ? "▲" : "▼"}</span>
+                      </div>
                       {isExpanded && (
-                        <div className="p-2 bg-[#4A4A4A] text-xs space-y-1 relative z-0">
-                          <p className="text-[#FFFFFF]">
+                        <div className="p-2 bg-[#2D2D2D] text-xs space-y-2">
+                          <p className="text-[#D1D1D1]">
                             {routine?.name || "Rutina desconocida"} - {day?.dayName || "Día desconocido"}
                           </p>
                           <p className="text-[#B0B0B0]">Músculo: {exercise?.muscleGroup || "Desconocido"}</p>
-                          <div className="grid grid-cols-2 gap-1">
+                          <div className="grid grid-cols-2 gap-2">
                             <div>
-                              <label className="text-[#B0B0B0]">Fecha:</label>
-                              <input
+                              <label className="text-[#D1D1D1] text-xs font-medium">Fecha:</label>
+                              <Input
+                                name="date"
                                 type="date"
-                                value={currentEntry.date.split("T")[0]}
+                                value={currentEntry.date.toISOString().split("T")[0]}
                                 onChange={(e) => handleEditChange(cardKey, "date", e.target.value)}
-                                className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs focus:outline-none focus:ring-1 focus:ring-[#34C759]"
+                                className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                               />
                             </div>
                             <div>
-                              <label className="text-[#B0B0B0]">Series:</label>
-                              <input
+                              <label className="text-[#D1D1D1] text-xs font-medium">Series:</label>
+                              <Input
+                                name="sets"
                                 type="number"
                                 value={currentEntry.sets}
                                 onChange={(e) => handleEditChange(cardKey, "sets", Number(e.target.value))}
-                                className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs focus:outline-none focus:ring-1 focus:ring-[#34C759]"
+                                className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                               />
                             </div>
                             <div>
-                              <label className="text-[#B0B0B0]">Reps:</label>
-                              <input
+                              <label className="text-[#D1D1D1] text-xs font-medium">Reps:</label>
+                              <Input
+                                name="reps"
                                 type="number"
                                 value={currentEntry.reps}
                                 onChange={(e) => handleEditChange(cardKey, "reps", Number(e.target.value))}
-                                className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs focus:outline-none focus:ring-1 focus:ring-[#34C759]"
+                                className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                               />
                             </div>
                             <div>
-                              <label className="text-[#B0B0B0]">Peso:</label>
-                              <input
+                              <label className="text-[#D1D1D1] text-xs font-medium">Peso:</label>
+                              <Input
+                                name="weight"
                                 type="text"
                                 value={currentEntry.weight}
                                 onChange={(e) => handleEditChange(cardKey, "weight", e.target.value)}
-                                className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs focus:outline-none focus:ring-1 focus:ring-[#34C759]"
+                                className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                               />
                             </div>
                             <div className="col-span-2">
-                              <label className="text-[#B0B0B0]">Notas:</label>
+                              <label className="text-[#D1D1D1] text-xs font-medium">Notas:</label>
                               <textarea
                                 value={currentEntry.notes || ""}
                                 onChange={(e) => handleEditChange(cardKey, "notes", e.target.value)}
-                                className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs h-8 resize-none focus:outline-none focus:ring-1 focus:ring-[#34C759]"
+                                className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs h-8 resize-none focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                               />
                             </div>
                           </div>
                           <div className="flex space-x-2 mt-2">
-                            <button
-                              onClick={() => handleSaveEdit(cardKey, entry)}
-                              className="w-full bg-[#34C759] text-black py-1 rounded hover:bg-[#2DBF4E] text-xs"
+                            <Button
+                              variant="secondary"
+                              onClick={() => handleSaveEdit(cardKey)}
+                              className="w-full bg-[#66BB6A] text-black hover:bg-[#4CAF50] rounded-md py-1 px-2 text-xs font-semibold border border-[#4CAF50] shadow-md"
                             >
                               Guardar
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                              variant="secondary"
                               onClick={() => handleDelete(cardKey)}
-                              className="w-full bg-red-600 text-white py-1 rounded hover:bg-red-700 text-xs"
+                              className="w-full bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md"
                             >
                               Eliminar
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       )}
-                    </li>
+                    </Card>
                   );
                 })}
               </ul>
 
-              {/* Paginación */}
               {totalPages > 1 && (
                 <div className="mt-4 flex justify-between items-center">
-                  <button
+                  <Button
+                    variant="secondary"
                     onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className="p-2 bg-[#4A4A4A] text-[#B0B0B0] rounded-full disabled:opacity-50 text-xs"
+                    className="p-2 bg-[#4A4A4A] text-[#D1D1D1] rounded-full disabled:opacity-50 text-xs font-semibold border border-[#4A4A4A] shadow-md"
                   >
                     ◄
-                  </button>
-                  <span className="text-[#B0B0B0] text-xs">
+                  </Button>
+                  <span className="text-[#D1D1D1] text-xs font-semibold">
                     {currentPage}/{totalPages}
                   </span>
-                  <button
+                  <Button
+                    variant="secondary"
                     onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="p-2 bg-[#4A4A4A] text-[#B0B0B0] rounded-full disabled:opacity-50 text-xs"
+                    className="p-2 bg-[#4A4A4A] text-[#D1D1D1] rounded-full disabled:opacity-50 text-xs font-semibold border border-[#4A4A4A] shadow-md"
                   >
                     ►
-                  </button>
+                  </Button>
                 </div>
               )}
             </>
@@ -347,18 +339,17 @@ const ProgressPage = () => {
         </div>
       </div>
 
-      {/* Formulario para agregar progreso */}
       {showAddForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40">
-          <div className="bg-[#2D2D2D] p-4 rounded-lg max-w-md w-full">
-            <h3 className="text-sm font-semibold text-white mb-2">Agregar Progreso</h3>
+          <Card className="bg-[#252525] border-2 border-[#4A4A4A] p-4 rounded-md max-w-md w-full">
+            <h3 className="text-sm font-bold text-[#34C759] mb-2">Agregar Progreso</h3>
             <form onSubmit={handleAddSubmit} className="space-y-2">
               <div>
-                <label className="text-[#B0B0B0] text-xs">Rutina:</label>
+                <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Rutina:</label>
                 <select
                   value={newProgress.routineId}
                   onChange={(e) => handleAddChange("routineId", e.target.value)}
-                  className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs"
+                  className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                 >
                   {routines.map((routine) => (
                     <option key={routine._id} value={routine._id}>{routine.name}</option>
@@ -366,11 +357,11 @@ const ProgressPage = () => {
                 </select>
               </div>
               <div>
-                <label className="text-[#B0B0B0] text-xs">Día:</label>
+                <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Día:</label>
                 <select
                   value={newProgress.dayIndex}
                   onChange={(e) => handleAddChange("dayIndex", Number(e.target.value))}
-                  className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs"
+                  className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                 >
                   {routines.find((r) => r._id === newProgress.routineId)?.days.map((day, idx) => (
                     <option key={idx} value={idx}>{day.dayName}</option>
@@ -378,11 +369,11 @@ const ProgressPage = () => {
                 </select>
               </div>
               <div>
-                <label className="text-[#B0B0B0] text-xs">Ejercicio:</label>
+                <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Ejercicio:</label>
                 <select
                   value={newProgress.exerciseIndex}
                   onChange={(e) => handleAddChange("exerciseIndex", Number(e.target.value))}
-                  className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs"
+                  className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                 >
                   {routines.find((r) => r._id === newProgress.routineId)?.days[newProgress.dayIndex]?.exercises.map((exercise, idx) => (
                     <option key={idx} value={idx}>{exercise.name}</option>
@@ -390,103 +381,93 @@ const ProgressPage = () => {
                 </select>
               </div>
               <div>
-                <label className="text-[#B0B0B0] text-xs">Series:</label>
-                <input
+                <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Series:</label>
+                <Input
+                  name="sets"
                   type="number"
                   value={newProgress.sets}
                   onChange={(e) => handleAddChange("sets", Number(e.target.value))}
-                  className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs"
+                  className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="text-[#B0B0B0] text-xs">Reps:</label>
-                <input
+                <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Reps:</label>
+                <Input
+                  name="reps"
                   type="number"
                   value={newProgress.reps}
                   onChange={(e) => handleAddChange("reps", Number(e.target.value))}
-                  className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs"
+                  className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="text-[#B0B0B0] text-xs">Peso:</label>
-                <input
+                <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Peso:</label>
+                <Input
+                  name="weight"
                   type="text"
                   value={newProgress.weight}
                   onChange={(e) => handleAddChange("weight", e.target.value)}
-                  className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs"
+                  className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="text-[#B0B0B0] text-xs">Notas:</label>
+                <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Notas:</label>
                 <textarea
                   value={newProgress.notes}
                   onChange={(e) => handleAddChange("notes", e.target.value)}
-                  className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs h-8 resize-none"
+                  className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs h-8 resize-none focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="text-[#B0B0B0] text-xs">Fecha:</label>
-                <input
+                <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Fecha:</label>
+                <Input
+                  name="date"
                   type="date"
-                  value={newProgress.date}
+                  value={newProgress.date.toISOString().split("T")[0]}
                   onChange={(e) => handleAddChange("date", e.target.value)}
-                  className="w-full p-1 border border-[#4A4A4A] rounded bg-[#1A1A1A] text-white text-xs"
+                  className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                 />
               </div>
               <div className="flex space-x-2">
-                <button type="submit" className="w-full bg-[#34C759] text-black py-1 rounded text-xs hover:bg-[#2DBF4E]">
+                <Button
+                  type="submit"
+                  className="w-full bg-[#66BB6A] text-black hover:bg-[#4CAF50] rounded-md py-1 px-2 text-xs font-semibold border border-[#4CAF50] shadow-md"
+                >
                   Guardar
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="secondary"
                   type="button"
                   onClick={() => setShowAddForm(false)}
-                  className="w-full bg-[#4A4A4A] text-white py-1 rounded text-xs hover:bg-[#5A5A5A]"
+                  className="w-full bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md"
                 >
                   Cancelar
-                </button>
+                </Button>
               </div>
             </form>
-          </div>
+          </Card>
         </div>
       )}
 
-      {/* Botón flotante para limpiar */}
       <div className="fixed bottom-4 right-4 z-10">
-        <button
+        <Button
           onClick={handleClear}
-          className="bg-red-600 text-white p-3 rounded-full shadow-lg hover:bg-red-700 transition-colors"
+          className="bg-[#EF5350] text-white p-3 rounded-full shadow-md hover:bg-[#D32F2F] border border-[#D32F2F]"
         >
           🗑️
-        </button>
+        </Button>
       </div>
 
-      {/* Botón de volver */}
       <div className="fixed bottom-4 left-4 z-10">
-        <button
+        <Button
           onClick={handleBack}
-          className="bg-white text-black p-3 rounded-full shadow-lg hover:bg-[#E0E0E0] transition-colors"
+          className="bg-[#42A5F5] text-black p-3 rounded-full shadow-md hover:bg-[#1E88E5] border border-[#1E88E5]"
         >
           ←
-        </button>
+        </Button>
       </div>
 
-      {/* Notificación Toast */}
       {toastMessage && <Toast message={toastMessage} onClose={handleCloseToast} />}
     </div>
   );
-};
-
-export const getServerSideProps: GetServerSideProps = async (context) => {
-  const token = context.req.cookies.token;
-  if (!token) {
-    return { redirect: { destination: "/", permanent: false } };
-  }
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "my-super-secret-key") as { userId: string };
-    return { props: {} };
-  } catch (error) {
-    return { redirect: { destination: "/", permanent: false } };
-  }
-};
-
-export default ProgressPage;
+}

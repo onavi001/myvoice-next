@@ -11,14 +11,25 @@ import { addProgress } from "../store/progressSlice";
 import { useRouter } from "next/router";
 import { GetServerSideProps } from "next";
 import jwt from "jsonwebtoken";
-import {dbConnect} from "../lib/mongodb";
+import { dbConnect } from "../lib/mongodb";
 import Button from "../components/Button";
 import Input from "../components/Input";
 import Textarea from "../components/Textarea";
 import ProgressBar from "../components/ProgressBar";
 import Card from "../components/Card";
+import { RoutineData } from "../models/Routine";
+import { IExercise } from "../models/Exercise";
+import { updateExercise } from "../store/routineSlice";
+import RoutineModel from "../models/Routine";
+import DayModel from "../models/Day";
+import ExerciseModel from "../models/Exercise";
+import VideoModel, { IVideo } from "../models/Video";
 
-export default function RoutinePage({ initialRoutines }: { initialRoutines: any[] }) {
+interface RoutinePageProps {
+  initialRoutines: RoutineData[];
+}
+
+export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
   const dispatch = useDispatch<AppDispatch>();
   const { routines, selectedRoutineIndex, loading, error } = useSelector((state: RootState) => state.routine);
   const { user, loading: userLoading } = useSelector((state: RootState) => state.user);
@@ -26,20 +37,23 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: any[
 
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [expandedExercises, setExpandedExercises] = useState<Record<number, boolean>>({});
-  const [editData, setEditData] = useState<Record<string, any>>({});
+  const [editData, setEditData] = useState<Record<string, Partial<IExercise>>>({});
   const [loadingVideos, setLoadingVideos] = useState<Record<number, boolean>>({});
 
   const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || "TU_CLAVE_API_YOUTUBE";
 
   useEffect(() => {
-    if (!user && !userLoading) {
-      router.push("/");
-    } else if (user && routines.length === 0) {
+    if (user && routines.length === 0) {
       dispatch(fetchRoutines());
     }
   }, [dispatch, user, userLoading, router, routines]);
 
-  const fetchExerciseVideo = async (exerciseName: string, routineIndex: number, dayIndex: number, exerciseIndex: number) => {
+  const fetchExerciseVideo = async (
+    exerciseName: string,
+    routineIndex: number,
+    dayIndex: number,
+    exerciseIndex: number
+  ) => {
     setLoadingVideos((prev) => ({ ...prev, [exerciseIndex]: true }));
     try {
       const response = await fetch(
@@ -47,7 +61,6 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: any[
           `${exerciseName} exercise technique muscles`
         )}&type=video&maxResults=5&key=${YOUTUBE_API_KEY}`
       );
-      console.log()
       const data = await response.json();
       if (data.items && data.items.length > 0) {
         const videoUrls = data.items.map((item: any) => `https://www.youtube.com/embed/${item.id.videoId}`);
@@ -55,12 +68,14 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: any[
           url,
           isCurrent: idx === 0,
         }));
-        await dispatch(setExerciseVideos({
-          routineId: routines[routineIndex]._id,
-          dayIndex,
-          exerciseIndex,
-          videos,
-        })).unwrap();
+        await dispatch(
+          setExerciseVideos({
+            routineId: routines[routineIndex]._id,
+            dayIndex,
+            exerciseIndex,
+            videos,
+          })
+        ).unwrap();
       }
     } catch (error) {
       console.error("Error fetching YouTube video:", error);
@@ -95,29 +110,38 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: any[
   };
 
   const handleSave = (dayIndex: number, exerciseIndex: number) => {
-    if (selectedRoutineIndex !== null) {
+    if (selectedRoutineIndex !== null && user) {
       const key = `${dayIndex}-${exerciseIndex}`;
       const updatedExercise = editData[key];
       if (updatedExercise) {
         const currentExercise = routines[selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex];
-        dispatch(addProgress({
-          routineId: routines[selectedRoutineIndex]._id,
-          dayIndex: dayIndex,
-          exerciseIndex: exerciseIndex,
-          sets: Number(updatedExercise.sets || currentExercise.sets),
-          reps: Number(updatedExercise.reps || currentExercise.reps),
-          weight: updatedExercise.weight || currentExercise.weight || "",
-          notes: updatedExercise.notes || currentExercise.notes || "",
-          userId: user!._id,
-          date: ""
-        }));
-        // Actualizamos el ejercicio en la rutina (simulamos updateExercise)
-        const updatedRoutines = [...routines];
-        updatedRoutines[selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex] = {
-          ...currentExercise,
-          ...updatedExercise,
-        };
-        dispatch(fetchRoutines()); // Refetch para simular (puedes crear un action específico)
+        dispatch(
+          addProgress({
+            routineId: routines[selectedRoutineIndex]._id,
+            dayIndex,
+            exerciseIndex,
+            sets: Number(updatedExercise.sets ?? currentExercise.sets),
+            reps: Number(updatedExercise.reps ?? currentExercise.reps),
+            weight: updatedExercise.weight ?? currentExercise.weight ?? "",
+            notes: updatedExercise.notes ?? currentExercise.notes ?? "",
+            userId: user._id as string,
+            date: new Date().toISOString(),
+          })
+        );
+        // Actualizar el ejercicio en la base de datos
+        dispatch(
+          updateExercise({
+            routineId: routines[selectedRoutineIndex]._id,
+            dayId: routines[selectedRoutineIndex].days[dayIndex]._id,
+            exerciseId: currentExercise._id,
+            exerciseData: {
+              sets: Number(updatedExercise.sets ?? currentExercise.sets),
+              reps: Number(updatedExercise.reps ?? currentExercise.reps),
+              weight: updatedExercise.weight ?? currentExercise.weight,
+              notes: updatedExercise.notes ?? currentExercise.notes,
+            },
+          })
+        );
         setEditData((prev) => {
           const newData = { ...prev };
           delete newData[key];
@@ -127,41 +151,52 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: any[
     }
   };
 
-  const handleChangeVideo = (direction: "next" | "prev", routineIndex: number, dayIndex: number, exerciseIndex: number) => {
+  const handleChangeVideo = (
+    direction: "next" | "prev",
+    routineIndex: number,
+    dayIndex: number,
+    exerciseIndex: number
+  ) => {
     if (selectedRoutineIndex !== null) {
       const exercise = routines[routineIndex].days[dayIndex].exercises[exerciseIndex];
       if (exercise.videos && exercise.videos.length > 1) {
-        const currentIndex = exercise.videos.findIndex((v: any) => v.isCurrent);
-        const newIndex = direction === "next"
-          ? (currentIndex + 1) % exercise.videos.length
-          : (currentIndex - 1 + exercise.videos.length) % exercise.videos.length;
-        const updatedVideos = exercise.videos.map((v: any, idx: number) => ({
+        const currentIndex = exercise.videos.findIndex((v) => v.isCurrent);
+        const newIndex =
+          direction === "next"
+            ? (currentIndex + 1) % exercise.videos.length
+            : (currentIndex - 1 + exercise.videos.length) % exercise.videos.length;
+        const updatedVideos = exercise.videos.map((v, idx) => ({
           ...v,
           isCurrent: idx === newIndex,
         }));
-        dispatch(setExerciseVideos({
-          routineId: routines[routineIndex]._id,
-          dayIndex,
-          exerciseIndex,
-          videos: updatedVideos,
-        }));
+        dispatch(
+          setExerciseVideos({
+            routineId: routines[routineIndex]._id,
+            dayIndex,
+            exerciseIndex,
+            videos: updatedVideos,
+          })
+        );
       }
     }
   };
 
   const handleToggleCompleted = (routineId: string, dayIndex: number, exerciseIndex: number) => {
-    dispatch(updateExerciseCompleted({ routineId, dayIndex, exerciseIndex, completed: !routines[selectedRoutineIndex!].days[dayIndex].exercises[exerciseIndex].completed }));
+    if (selectedRoutineIndex !== null) {
+      const currentCompleted = routines[selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex].completed;
+      dispatch(updateExerciseCompleted({ routineId, dayIndex, exerciseIndex, completed: !currentCompleted }));
+    }
   };
 
-  const calculateDayProgress = (day: any) => {
+  const calculateDayProgress = (day: RoutineData["days"][number]) => {
     const total = day.exercises.length;
-    const completed = day.exercises.filter((ex: any) => ex.completed).length;
+    const completed = day.exercises.filter((ex) => ex.completed).length;
     return total > 0 ? (completed / total) * 100 : 0;
   };
 
-  const calculateWeekProgress = (routine: any) => {
-    const total = routine.days.reduce((sum: number, day: any) => sum + day.exercises.length, 0);
-    const completed = routine.days.reduce((sum: number, day: any) => sum + day.exercises.filter((ex: any) => ex.completed).length, 0);
+  const calculateWeekProgress = (routine: RoutineData) => {
+    const total = routine.days.reduce((sum, day) => sum + day.exercises.length, 0);
+    const completed = routine.days.reduce((sum, day) => sum + day.exercises.filter((ex) => ex.completed).length, 0);
     return total > 0 ? (completed / total) * 100 : 0;
   };
 
@@ -220,9 +255,9 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: any[
         </div>
         <ProgressBar progress={calculateWeekProgress(selectedRoutine)} label="Progreso Semanal" />
         <div className="flex overflow-x-auto space-x-2 mb-4 scrollbar-hidden">
-          {selectedRoutine.days.map((day: any, index: number) => (
+          {selectedRoutine.days.map((day, index) => (
             <button
-              key={index}
+              key={day._id}
               onClick={() => setSelectedDayIndex(index)}
               className={`px-2 py-1 rounded-full text-xs font-medium transition-colors shadow-sm truncate max-w-[120px] ${
                 selectedDayIndex === index ? "bg-white text-black" : "bg-[#2D2D2D] text-[#B0B0B0] hover:bg-[#4A4A4A]"
@@ -246,7 +281,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: any[
           </div>
         </Card>
         <ul className="space-y-2">
-          {selectedDay.exercises.map((exercise: any, exerciseIndex: number) => {
+          {selectedDay.exercises.map((exercise, exerciseIndex) => {
             const key = `${selectedDayIndex}-${exerciseIndex}`;
             const edited = editData[key] || {};
             const currentExercise = { ...exercise, ...edited };
@@ -254,7 +289,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: any[
             const isLoading = loadingVideos[exerciseIndex] || false;
 
             return (
-              <Card key={exerciseIndex} className="overflow-hidden">
+              <Card key={exercise._id} className="overflow-hidden">
                 <button
                   onClick={() => toggleExerciseExpand(exerciseIndex, exercise.name)}
                   className="w-full flex justify-between items-center p-2 text-left hover:bg-[#4A4A4A] transition-colors"
@@ -282,7 +317,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: any[
                         <div>
                           <span className="text-[#B0B0B0] font-semibold">Consejos:</span>
                           <ul className="list-disc pl-3 text-[#FFFFFF] max-w-full">
-                            {currentExercise.tips.map((tip: string, index: number) => (
+                            {currentExercise.tips.map((tip, index) => (
                               <li key={index}>{tip}</li>
                             ))}
                           </ul>
@@ -292,7 +327,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: any[
                     {currentExercise.videos && currentExercise.videos.length > 0 ? (
                       <div>
                         <iframe
-                          src={currentExercise.videos.find((v: any) => v.isCurrent)?.url || currentExercise.videos[0].url}
+                          src={Array.isArray(currentExercise.videos) && 'isCurrent' in currentExercise.videos[0] ? (currentExercise.videos.find((v) => (v as IVideo).isCurrent) as IVideo)?.url || (currentExercise.videos[0] as IVideo).url : ""}
                           title={`Demostración de ${exercise.name}`}
                           className="w-full h-32 rounded border border-[#4A4A4A]"
                           frameBorder="0"
@@ -302,14 +337,18 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: any[
                         {currentExercise.videos.length > 1 && (
                           <div className="flex justify-between mt-2">
                             <Button
-                              onClick={() => handleChangeVideo("prev", selectedRoutineIndex, selectedDayIndex, exerciseIndex)}
+                              onClick={() =>
+                                handleChangeVideo("prev", selectedRoutineIndex, selectedDayIndex, exerciseIndex)
+                              }
                               className="px-2 py-1 text-xs"
                               variant="secondary"
                             >
                               Anterior
                             </Button>
                             <Button
-                              onClick={() => handleChangeVideo("next", selectedRoutineIndex, selectedDayIndex, exerciseIndex)}
+                              onClick={() =>
+                                handleChangeVideo("next", selectedRoutineIndex, selectedDayIndex, exerciseIndex)
+                              }
                               className="px-2 py-1 text-xs"
                               variant="secondary"
                             >
@@ -332,7 +371,9 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: any[
                           name="sets"
                           type="number"
                           value={currentExercise.sets || ""}
-                          onChange={(e) => handleInputChange(selectedDayIndex, exerciseIndex, "sets", Number(e.target.value))}
+                          onChange={(e) =>
+                            handleInputChange(selectedDayIndex, exerciseIndex, "sets", Number(e.target.value))
+                          }
                         />
                       </div>
                       <div>
@@ -341,7 +382,9 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: any[
                           name="reps"
                           type="number"
                           value={currentExercise.reps || ""}
-                          onChange={(e) => handleInputChange(selectedDayIndex, exerciseIndex, "reps", Number(e.target.value))}
+                          onChange={(e) =>
+                            handleInputChange(selectedDayIndex, exerciseIndex, "reps", Number(e.target.value))
+                          }
                         />
                       </div>
                       <div>
@@ -362,10 +405,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: any[
                         />
                       </div>
                     </div>
-                    <Button
-                      onClick={() => handleSave(selectedDayIndex, exerciseIndex)}
-                      className="w-full"
-                    >
+                    <Button onClick={() => handleSave(selectedDayIndex, exerciseIndex)} className="w-full">
                       Guardar
                     </Button>
                   </div>
@@ -384,7 +424,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: any[
   );
 }
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
+export const getServerSideProps: GetServerSideProps<RoutinePageProps> = async (context) => {
   const token = context.req.cookies.token;
   if (!token) {
     return { redirect: { destination: "/", permanent: false } };
@@ -392,11 +432,58 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
   try {
     await dbConnect();
-    const Routine = (await import("../models/routines")).default;
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "my-super-secret-key") as { userId: string };
-    const routines = await Routine.find({ userId: decoded.userId }).lean();
-    return { props: { initialRoutines: JSON.parse(JSON.stringify(routines)) } };
+
+    const routines = await RoutineModel.find({ userId: decoded.userId })
+      .populate({
+        path: "days",
+        model: DayModel,
+        populate: {
+          path: "exercises",
+          model: ExerciseModel,
+          populate: {
+            path: "videos",
+            model: VideoModel,
+          },
+        },
+      })
+      .lean();
+
+    const serializedRoutines: RoutineData[] = routines.map((r) => ({
+      _id: r._id.toString(),
+      userId: r.userId.toString(),
+      name: r.name,
+      days: r.days.map((day: any) => ({
+        _id: day._id.toString(),
+        dayName: day.dayName,
+        musclesWorked: day.musclesWorked || [],
+        warmupOptions: day.warmupOptions || [],
+        explanation: day.explanation || "",
+        exercises: day.exercises.map((exercise: any) => ({
+          _id: exercise._id.toString(),
+          name: exercise.name,
+          muscleGroup: exercise.muscleGroup || "",
+          sets: exercise.sets || 0,
+          reps: exercise.reps || 0,
+          weight: exercise.weight || "",
+          rest: exercise.rest || "",
+          tips: exercise.tips || [],
+          completed: exercise.completed || false,
+          videos: exercise.videos.map((video: any) => ({
+            _id: video._id.toString(),
+            url: video.url,
+            isCurrent: video.isCurrent,
+          })),
+          notes: exercise.notes || "",
+        })),
+      })),
+      createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: r.updatedAt ? new Date(r.updatedAt).toISOString() : new Date().toISOString(),
+    }));
+
+    return { props: { initialRoutines: serializedRoutines } };
   } catch (error) {
+    console.error("Error en getServerSideProps:", error);
     return { redirect: { destination: "/", permanent: false } };
   }
 };

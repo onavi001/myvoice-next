@@ -8,7 +8,7 @@ import { useRouter } from "next/router";
 import { logout } from "../store/userSlice";
 import "../styles/globals.css";
 import Navbar from "../components/Navbar";
-import { addRoutine } from "../store/routineSlice";
+import { createRoutine } from "../store/routineSlice";
 
 function AppInitializer({ children }: { children: React.ReactNode }) {
   const dispatch:AppDispatch = useDispatch();
@@ -87,7 +87,7 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
       ],
     };
     if (user) {
-      await dispatch(addRoutine({ ...aiGeneratedRoutine, userId: user._id }));
+      await dispatch(createRoutine({ ...aiGeneratedRoutine }));
       if (!routineError) {
         router.push("/routine");
       }

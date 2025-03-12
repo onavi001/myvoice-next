@@ -1,14 +1,27 @@
-import { Schema, model, Document, Types, Model } from "mongoose";
+import { Schema, model, Model, Types } from "mongoose";
+import { IDay } from "./Day";
 
-interface IRoutine extends Document {
+export interface IRoutine {
   userId: Types.ObjectId;
   name: string;
+  days: Types.ObjectId[] | IDay[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Tipo plano para el frontend
+export interface RoutineData {
+  _id: string;
+  userId: string;
+  name: string;
   days: {
+    _id: string;
     dayName: string;
     musclesWorked: string[];
     warmupOptions: string[];
     explanation: string;
     exercises: {
+      _id: string;
       name: string;
       muscleGroup: string;
       sets: number;
@@ -17,37 +30,18 @@ interface IRoutine extends Document {
       rest: string;
       tips: string[];
       completed: boolean;
-      videos: { url: string; isCurrent: boolean }[];
+      videos: { _id: string; url: string; isCurrent: boolean }[];
+      notes?: string;
     }[];
   }[];
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const RoutineSchema: Schema = new Schema<IRoutine>({
   userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
   name: { type: String, required: true },
-  days: [
-    {
-      dayName: { type: String, required: true },
-      musclesWorked: [String],
-      warmupOptions: [String],
-      explanation: String,
-      exercises: [
-        {
-          name: { type: String, required: true },
-          muscleGroup: String,
-          sets: Number,
-          reps: Number,
-          weight: String,
-          rest: String,
-          tips: [String],
-          completed: { type: Boolean, default: false },
-          videos: [{ url: String, isCurrent: Boolean }],
-        },
-      ],
-    },
-  ],
+  days: [{ type: Schema.Types.ObjectId, ref: "Day" }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

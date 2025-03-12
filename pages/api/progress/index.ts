@@ -1,16 +1,12 @@
-// pages/api/progress/index.ts
 import { NextApiRequest, NextApiResponse } from "next";
-import {dbConnect} from "../../../lib/mongodb";
-import Progress, { IProgress } from "../../../models/progress";
 import jwt from "jsonwebtoken";
+import { dbConnect } from "../../../lib/mongodb";
+import Progress from "../../../models/Progress";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await dbConnect();
-
   const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
-  if (!token) {
-    return res.status(401).json({ message: "No autenticado" });
-  }
+  if (!token) return res.status(401).json({ message: "No autenticado" });
 
   let decoded;
   try {
@@ -24,30 +20,55 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   switch (req.method) {
     case "GET":
       try {
-        const progress = await Progress.find({ userId }).sort({ date: -1 });
-        res.status(200).json(progress);
+        const progress = await Progress.find({ userId }).lean();
+        const serializedProgress = progress.map((p) => ({
+          _id: p._id.toString(),
+          userId: p.userId.toString(),
+          routineId: p.routineId.toString(),
+          dayIndex: p.dayIndex,
+          exerciseIndex: p.exerciseIndex,
+          sets: p.sets,
+          reps: p.reps,
+          weight: p.weight,
+          notes: p.notes,
+          date: p.date.toISOString(),
+        }));
+        res.status(200).json(serializedProgress);
       } catch (error) {
-        res.status(500).json({ message: "Error al obtener el progreso", error });
+        res.status(500).json({ message: "Error al obtener progreso", error });
       }
       break;
 
     case "POST":
       try {
-        const progressData: IProgress = { ...req.body, userId };
-        const newProgress = new Progress(progressData);
-        await newProgress.save();
-        res.status(201).json(newProgress);
-      } catch (error) {
-        res.status(500).json({ message: "Error al agregar el progreso", error });
-      }
-      break;
+        const { routineId, dayIndex, exerciseIndex, sets, reps, weight, notes, date } = req.body;
+        const progressEntry = new Progress({
+          userId,
+          routineId,
+          dayIndex,
+          exerciseIndex,
+          sets,
+          reps,
+          weight: weight || "",
+          notes: notes || "",
+          date: date || new Date(),
+        });
+        await progressEntry.save();
 
-    case "DELETE":
-      try {
-        await Progress.deleteMany({ userId });
-        res.status(200).json({ message: "Progreso limpiado correctamente" });
+        res.status(201).json({
+          _id: progressEntry._id.toString(),
+          userId: progressEntry.userId.toString(),
+          routineId: progressEntry.routineId.toString(),
+          dayIndex: progressEntry.dayIndex,
+          exerciseIndex: progressEntry.exerciseIndex,
+          sets: progressEntry.sets,
+          reps: progressEntry.reps,
+          weight: progressEntry.weight,
+          notes: progressEntry.notes,
+          date: progressEntry.date.toISOString(),
+        });
       } catch (error) {
-        res.status(500).json({ message: "Error al limpiar el progreso", error });
+        res.status(500).json({ message: "Error al agregar progreso", error });
       }
       break;
 
