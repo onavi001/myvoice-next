@@ -133,8 +133,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         const routine: IRoutine = {
-            _id: new mongoose.Types.ObjectId(),
-            userId,
+            //_id: new mongoose.Types.ObjectId(),
+            userId: new mongoose.Types.ObjectId(),
             name: routineData.name,
             days: daysData.map((day) => day._id),
             createdAt: new Date(),

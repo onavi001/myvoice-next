@@ -319,7 +319,6 @@ export const generateRoutine = createAsyncThunk(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // Añadir Authorization si usas autenticación
         },
         body: JSON.stringify(input),
       });
@@ -483,6 +482,7 @@ const routineSlice = createSlice({
         state.error = null;
       })
       .addCase(generateRoutine.fulfilled, (state, action: PayloadAction<RoutineData>) => {
+        console.log(action.payload)
         state.loading = false;
         state.routines.push(action.payload);
       })

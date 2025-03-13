@@ -2,6 +2,7 @@ import { Schema, model, Model, Types } from "mongoose";
 import { IExercise } from "./Exercise";
 
 export interface IDay {
+  _id: Types.ObjectId;
   dayName: string;
   musclesWorked: string[];
   warmupOptions: string[];

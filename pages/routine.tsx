@@ -41,12 +41,17 @@ export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
   const [loadingVideos, setLoadingVideos] = useState<Record<number, boolean>>({});
 
   const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || "TU_CLAVE_API_YOUTUBE";
-
+  
+  useEffect(() => {
+    dispatch(fetchRoutines());
+  }, [])
+  
+  
   useEffect(() => {
     if (user && routines.length === 0) {
       dispatch(fetchRoutines());
     }
-  }, [dispatch, user, userLoading, router, routines]);
+  }, [dispatch, user, userLoading, router]);
 
   const fetchExerciseVideo = async (
     exerciseName: string,
@@ -209,6 +214,7 @@ export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
         <div className="p-4 max-w-md mx-auto mt-16">
           <h2 className="text-sm font-semibold text-white mb-3 truncate">Tu Rutina</h2>
           <p className="text-[#B0B0B0] text-xs">No hay rutinas generadas. Genera una desde la página principal.</p>
+          <Button onClick={() => router.push("/routine-AI")} className="mt-3">Generar Rutina con IA</Button>
           <Button onClick={() => router.push("/routine-form")} className="mt-3">Agregar Rutina Manual</Button>
           <Button onClick={() => router.push("/")} className="mt-3">Volver</Button>
         </div>
