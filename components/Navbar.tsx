@@ -24,6 +24,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMyRoutine, onNewRoutine, onProgress, 
         <div className="text-white text-lg font-semibold">MyVoice</div>
         {/* Botones principales */}
         <div className="flex space-x-2">
+          <span className="max-w-auto" ><Button variant="secondary" onClick={onGenerateRoutine} className="px-4">Generar Rutina con IA</Button></span>
           <span className="max-w-auto" ><Button onClick={onMyRoutine} className="px-4">Mi rutina</Button></span>
           <span className="max-w-auto" ><Button variant="secondary" onClick={onNewRoutine} className="px-4">Nueva Rutina</Button></span>
           <span className="max-w-auto" ><Button onClick={onProgress} className=" px-4">Progreso</Button></span>
@@ -41,12 +42,6 @@ const Navbar: React.FC<NavbarProps> = ({ onMyRoutine, onNewRoutine, onProgress, 
       {/* Menú desplegable */}
       {isMenuOpen && (
         <div className="absolute top-12 right-4 w-48 bg-[#2D2D2D] rounded-lg shadow-lg p-2">
-          <button
-            onClick={onGenerateRoutine}
-            className="w-full text-left px-2 py-1 text-xs text-white hover:bg-[#4A4A4A] rounded transition-colors"
-          >
-            Generar Rutina con IA
-          </button>
           {hasSelectedRoutine && onEditRoutine && (
             <button
               onClick={onEditRoutine}

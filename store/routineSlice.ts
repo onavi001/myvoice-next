@@ -1,6 +1,15 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { RoutineData } from "../models/Routine";
 
+interface RoutineInput {
+  level: "principiante" | "intermedio" | "avanzado";
+  goal: "fuerza" | "hipertrofia" | "resistencia";
+  days: number;
+  equipment: "gym" | "casa" | "pesas";
+  name?: string;
+  notes?: string;
+}
+
 interface RoutineState {
   routines: RoutineData[];
   selectedRoutineIndex: number | null;
@@ -302,6 +311,28 @@ export const setExerciseVideos = createAsyncThunk(
   }
 );
 
+export const generateRoutine = createAsyncThunk(
+  "routine/generateRoutine",
+  async (input: RoutineInput, { rejectWithValue }) => {
+    try {
+      const response = await fetch("/api/routines/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          // Añadir Authorization si usas autenticación
+        },
+        body: JSON.stringify(input),
+      });
+
+      if (!response.ok) throw new Error("Error al generar la rutina");
+      const routine: RoutineData = await response.json();
+      return routine;
+    } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+
 const routineSlice = createSlice({
   name: "routine",
   initialState,
@@ -445,6 +476,18 @@ const routineSlice = createSlice({
         }
       })
       .addCase(setExerciseVideos.rejected, (state, action) => {
+        state.error = action.payload as string;
+      })
+      .addCase(generateRoutine.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(generateRoutine.fulfilled, (state, action: PayloadAction<RoutineData>) => {
+        state.loading = false;
+        state.routines.push(action.payload);
+      })
+      .addCase(generateRoutine.rejected, (state, action) => {
+        state.loading = false;
         state.error = action.payload as string;
       });
   },

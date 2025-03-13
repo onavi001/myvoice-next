@@ -19,80 +19,6 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     dispatch(verifyUser());
   }, [dispatch]);
-  const generateRoutineWithAI = async () => {
-    // Simulación de una rutina generada por IA
-    const aiGeneratedRoutine = {
-      name: "Rutina de Fuerza Generada por IA",
-      days: [
-        {
-          dayName: "Día 1 - Pecho y Tríceps",
-          exercises: [
-            {
-              name: "Press de banca",
-              sets: 4,
-              reps: 8,
-              weight: "70kg",
-              rest: "90s",
-              tips: ["Mantén la espalda recta", "Controla el descenso"],
-              completed: false,
-              muscleGroup: "Pecho",
-              videos: [{ url: "https://www.youtube.com/embed/example1", isCurrent: true }],
-            },
-            {
-              name: "Fondos en paralelas",
-              sets: 3,
-              reps: 12,
-              weight: "Peso corporal",
-              rest: "60s",
-              tips: ["Baja hasta 90 grados", "Mantén los codos cerca"],
-              completed: false,
-              muscleGroup: "Tríceps",
-              videos: [],
-            },
-          ],
-          musclesWorked: ["Pecho", "Tríceps"],
-          warmupOptions: ["5 min cinta", "Rotaciones de hombros"],
-          explanation: "Enfocado en fuerza y volumen para pecho y tríceps.",
-        },
-        {
-          dayName: "Día 2 - Espalda y Bíceps",
-          exercises: [
-            {
-              name: "Dominadas",
-              sets: 4,
-              reps: 10,
-              weight: "Peso corporal",
-              rest: "90s",
-              tips: ["Sube hasta la barbilla", "Controla la bajada"],
-              completed: false,
-              muscleGroup: "Espalda",
-              videos: [{ url: "https://www.youtube.com/embed/example2", isCurrent: true }],
-            },
-            {
-              name: "Curl de bíceps",
-              sets: 3,
-              reps: 12,
-              weight: "15kg",
-              rest: "60s",
-              tips: ["Evita balanceo", "Contrae en la cima"],
-              completed: false,
-              muscleGroup: "Bíceps",
-              videos: [],
-            },
-          ],
-          musclesWorked: ["Espalda", "Bíceps"],
-          warmupOptions: ["5 min remo", "Estiramientos dinámicos"],
-          explanation: "Enfocado en fuerza y definición para espalda y bíceps.",
-        },
-      ],
-    };
-    if (user) {
-      await dispatch(createRoutine({ ...aiGeneratedRoutine }));
-      if (!routineError) {
-        router.push("/routine");
-      }
-    }
-  };
   return (
     <>
       <Navbar
@@ -100,7 +26,7 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
         onNewRoutine={() => router.push("/routine-form")}
         onProgress={() => router.push("/progress")}
         onLogout={() => dispatch(logout())}
-        onGenerateRoutine={generateRoutineWithAI}
+        onGenerateRoutine={() => router.push("/routine-AI")}
         
         onEditRoutine={
           router.asPath === "/routine" ? () => selectedRoutine !== null && router.push(`/routine-edit/${routines[selectedRoutine]._id}`) : undefined

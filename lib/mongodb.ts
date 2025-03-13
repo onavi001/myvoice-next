@@ -6,9 +6,7 @@ declare global {
     promise: Promise<mongoose.Mongoose> | null;
   };
 }
-const MONGODB_URI= "mongodb+srv://navi:admin@cluster0.xmv9s.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-//                  mongodb+srv://navi:<db_password>@cluster0.xmv9s.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
-//const MONGODB_URI: string = process.env.MONGODB_URI || "mongodb://localhost:27017/myvoice";
+const MONGODB_URI: string = process.env.MONGO_URI || "mongodb://localhost:27017/myvoice";
 
 if (!MONGODB_URI) {
   throw new Error("Please define the MONGODB_URI environment variable");
