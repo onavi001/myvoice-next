@@ -44,7 +44,7 @@ export default function ProgressPage() {
     if (user && !routines.length && !routineLoading) {
       dispatch(fetchRoutines());
     }
-  }, [dispatch, user, progress, progressLoading]);
+  }, [dispatch, user]);
 
   useEffect(() => {
     if (user && !progress.length && !progressLoading) {
