@@ -26,6 +26,7 @@ export interface RoutineData {
       muscleGroup: string;
       sets: number;
       reps: number;
+      weightUnit: "kg" | "lb";
       weight: string;
       rest: string;
       tips: string[];

@@ -49,6 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               muscleGroup: e.muscleGroup,
               sets: e.sets,
               reps: e.reps,
+              weightUnit: e.weightUnit,
               weight: e.weight,
               rest: e.rest,
               tips: e.tips,

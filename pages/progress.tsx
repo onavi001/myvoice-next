@@ -34,6 +34,7 @@ export default function ProgressPage() {
     exerciseIndex: 0,
     sets: 0,
     reps: 0,
+    weightUnit: "kg",
     weight: "",
     notes: "",
     date: new Date(),
@@ -70,6 +71,7 @@ export default function ProgressPage() {
   };
 
   const handleEditChange = (cardKey: string, field: keyof ProgressData, value: any) => {
+    console.log(cardKey, field, value);
     setEditData((prev) => ({
       ...prev,
       [cardKey]: { ...prev[cardKey], [field]: field === "date" ? new Date(value) : value },
@@ -114,6 +116,7 @@ export default function ProgressPage() {
         exerciseIndex: 0,
         sets: 0,
         reps: 0,
+        weightUnit: "kg",
         weight: "",
         notes: "",
         date: new Date(),
@@ -258,6 +261,8 @@ export default function ProgressPage() {
                                 className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                               />
                             </div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
                             <div>
                               <label className="text-[#D1D1D1] text-xs font-medium">Reps:</label>
                               <Input
@@ -278,14 +283,26 @@ export default function ProgressPage() {
                                 className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                               />
                             </div>
-                            <div className="col-span-2">
-                              <label className="text-[#D1D1D1] text-xs font-medium">Notas:</label>
-                              <textarea
-                                value={currentEntry.notes || ""}
-                                onChange={(e) => handleEditChange(cardKey, "notes", e.target.value)}
-                                className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs h-8 resize-none focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                              />
+                            <div>
+                              <label className="text-[#B0B0B0]">Unidad:</label>
+                              <select
+                                name="weightUnit"
+                                value={currentEntry.weightUnit || "kg"}
+                                onChange={(e) => handleEditChange(cardKey, "weightUnit", e.target.value)}
+                                className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
+                              >
+                                <option value="kg">Kilos (kg)</option>
+                                <option value="lb">Libras (lb)</option>
+                              </select>
                             </div>
+                          </div>
+                          <div className="col-span-2">
+                            <label className="text-[#D1D1D1] text-xs font-medium">Notas:</label>
+                            <textarea
+                              value={currentEntry.notes || ""}
+                              onChange={(e) => handleEditChange(cardKey, "notes", e.target.value)}
+                              className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs h-8 resize-none focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                            />
                           </div>
                           <div className="flex space-x-2 mt-2">
                             <Button

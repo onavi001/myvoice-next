@@ -29,6 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           exerciseIndex: p.exerciseIndex,
           sets: p.sets,
           reps: p.reps,
+          weightUnit: p.weightUnit,
           weight: p.weight,
           notes: p.notes,
           date: p.date.toISOString(),
@@ -41,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     case "POST":
       try {
-        const { routineId, dayIndex, exerciseIndex, sets, reps, weight, notes, date } = req.body;
+        const { routineId, dayIndex, exerciseIndex, sets, reps, weight, notes, date, weightUnit } = req.body;
         const progressEntry = new Progress({
           userId,
           routineId,
@@ -49,6 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           exerciseIndex,
           sets,
           reps,
+          weightUnit: weightUnit || "kg",
           weight: weight || "",
           notes: notes || "",
           date: date || new Date(),
@@ -63,6 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           exerciseIndex: progressEntry.exerciseIndex,
           sets: progressEntry.sets,
           reps: progressEntry.reps,
+          weightUnit: progressEntry.weightUnit,
           weight: progressEntry.weight,
           notes: progressEntry.notes,
           date: progressEntry.date.toISOString(),

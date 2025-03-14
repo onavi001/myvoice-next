@@ -136,7 +136,7 @@ const userSlice = createSlice({
         state.user = null;
         state.token = null;
         state.error = action.payload as string;
-      });
+      })
   },
 });
 

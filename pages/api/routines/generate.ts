@@ -47,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             ${notes ? `- Notas (obligatorio seguir): "${notes}"` : ""}
             **Instrucciones:**
             - Genera una rutina con ${days} días, cada uno con 6 ejercicios únicos y específicos (no repitas entre días).
-            - Por ejercicio: "name" (ej. "Press de banca con barra"), "muscleGroup" (grupo muscular principal), "sets" (3-5), "reps" (6-15 según objetivo), "weight" (ej. "10-15kg"), "rest" (ej. "60s"), "tips" (array con 2 consejos), "completed" (false), "videos" (array vacío), "notes" (string vacío o basado en las notas si aplica).
+            - Por ejercicio: "name" (ej. "Press de banca con barra"), "muscleGroup" (grupo muscular principal), "sets" (3-5), "reps" (6-15 según objetivo), "weight" (valor numérico o rango como "10-15", sin unidad), "weightUnit" ("kg" por defecto), "rest" (ej. "60s"), "tips" (array con 2 consejos), "completed" (false), "videos" (array vacío), "notes" (string vacío o basado en las notas si aplica).
             - Por día: "dayName" (descriptivo, ej. "Pecho y Tríceps"), "musclesWorked" (array de 3 músculos), "warmupOptions" (array de 3 calentamientos relevantes), "explanation" (breve, 15-20 palabras).
             - Incluye "_id" como string ficticio para cada nivel (ej. "routine1", "day1", "exercise1"), "userId" como "user123", "createdAt" y "updatedAt" como ISO strings actuales.
             **Formato JSON:**
@@ -69,7 +69,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     "muscleGroup": "...",
                     "sets": 4,
                     "reps": 8,
-                    "weight": "...",
+                    "weight": "10-15",
+                    "weightUnit": "kg",
                     "rest": "...",
                     "tips": ["...", "..."],
                     "completed": false,
@@ -163,6 +164,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     sets: ex.sets,
                     reps: ex.reps,
                     weight: ex.weight,
+                    weightUnit: ex.weightUnit,
                     rest: ex.rest,
                     tips: ex.tips,
                     completed: ex.completed,

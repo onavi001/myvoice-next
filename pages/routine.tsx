@@ -105,6 +105,7 @@ export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
   };
 
   const handleInputChange = (dayIndex: number, exerciseIndex: number, field: string, value: string | number) => {
+    console.log(dayIndex, exerciseIndex, field, value);
     if (selectedRoutineIndex !== null) {
       const key = `${dayIndex}-${exerciseIndex}`;
       setEditData((prev) => ({
@@ -127,6 +128,7 @@ export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
             exerciseIndex,
             sets: Number(updatedExercise.sets ?? currentExercise.sets),
             reps: Number(updatedExercise.reps ?? currentExercise.reps),
+            weightUnit: updatedExercise.weightUnit ?? currentExercise.weightUnit,
             weight: updatedExercise.weight ?? currentExercise.weight ?? "",
             notes: updatedExercise.notes ?? currentExercise.notes ?? "",
             date: new Date(),
@@ -141,6 +143,7 @@ export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
             exerciseData: {
               sets: Number(updatedExercise.sets ?? currentExercise.sets),
               reps: Number(updatedExercise.reps ?? currentExercise.reps),
+              weightUnit: updatedExercise.weightUnit ?? currentExercise.weightUnit,
               weight: updatedExercise.weight ?? currentExercise.weight,
               notes: updatedExercise.notes ?? currentExercise.notes,
             },
@@ -240,7 +243,7 @@ export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
 
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
-      <div className="p-4 max-w-full mx-auto flex-1 mt-16">
+      <div className="p-4 max-w-full mx-auto flex-1">
         <div className="flex overflow-x-auto space-x-2 mb-4 scrollbar-hidden">
           {routines.map((routine, index) => (
             <button
@@ -340,7 +343,7 @@ export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
                           allowFullScreen
                         />
                         {currentExercise.videos.length > 1 && (
-                          <div className="flex justify-between mt-2">
+                          <div className="flex justify-between">
                             <Button
                               onClick={() =>
                                 handleChangeVideo("prev", selectedRoutineIndex, selectedDayIndex, exerciseIndex)
@@ -348,16 +351,15 @@ export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
                               className="bg-transparent hover:bg-transparent text-white px-2 py-1 text-xs"
                               
                             >
-                              {"<<Anterior"}
+                              {"<< Anterior"}
                             </Button>
                             <Button
                               onClick={() =>
                                 handleChangeVideo("next", selectedRoutineIndex, selectedDayIndex, exerciseIndex)
                               }
                               className="bg-transparent hover:bg-transparent text-white px-2 py-1 text-xs"
-                              variant="secondary"
                             >
-                              {"Siguiente>>"}
+                              {"Siguiente >>"}
                             </Button>
                           </div>
                         )}
@@ -392,6 +394,8 @@ export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
                           }
                         />
                       </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1">
                       <div>
                         <label className="text-[#B0B0B0]">Peso:</label>
                         <Input
@@ -399,6 +403,18 @@ export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
                           value={currentExercise.weight || ""}
                           onChange={(e) => handleInputChange(selectedDayIndex, exerciseIndex, "weight", e.target.value)}
                         />
+                      </div>
+                      <div>
+                        <label className="text-[#B0B0B0]">Unidad:</label>
+                        <select
+                          name="weightUnit"
+                          value={currentExercise.weightUnit || "kg"}
+                          onChange={(e) => handleInputChange(selectedDayIndex, exerciseIndex, "weightUnit", e.target.value)}
+                          className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
+                        >
+                          <option value="kg">Kilos (kg)</option>
+                          <option value="lb">Libras (lb)</option>
+                        </select>
                       </div>
                       <div>
                         <label className="text-[#B0B0B0]">Notas:</label>
@@ -470,6 +486,7 @@ export const getServerSideProps: GetServerSideProps<RoutinePageProps> = async (c
           muscleGroup: exercise.muscleGroup || "",
           sets: exercise.sets || 0,
           reps: exercise.reps || 0,
+          weightUnit: exercise.weightUnit || "kg",
           weight: exercise.weight || "",
           rest: exercise.rest || "",
           tips: exercise.tips || [],

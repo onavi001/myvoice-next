@@ -7,6 +7,7 @@ export interface IProgress {
   exerciseIndex: number;
   sets: number;
   reps: number;
+  weightUnit: "kg" | "lb";
   weight: string;
   notes: string;
   date: Date;
@@ -19,9 +20,10 @@ export interface ProgressData {
   exerciseIndex: number;
   sets: number;
   reps: number;
+  weightUnit: "kg" | "lb";
   weight: string;
   notes: string;
-  date: Date; // Usamos Date en el frontend
+  date: Date;
 }
 
 const ProgressSchema: Schema = new Schema<IProgress>({
@@ -31,6 +33,7 @@ const ProgressSchema: Schema = new Schema<IProgress>({
   exerciseIndex: { type: Number, required: true },
   sets: { type: Number, required: true },
   reps: { type: Number, required: true },
+  weightUnit: { type: String, enum: ["kg", "lb"], default: "kg" },
   weight: { type: String, default: "" },
   notes: { type: String, default: "" },
   date: { type: Date, default: Date.now },

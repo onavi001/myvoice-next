@@ -6,6 +6,7 @@ export interface IExercise {
   muscleGroup: string;
   sets: number;
   reps: number;
+  weightUnit: "kg" | "lb";
   weight: string;
   rest: string;
   tips: string[];
@@ -21,6 +22,7 @@ const ExerciseSchema: Schema = new Schema<IExercise>({
   sets: Number,
   reps: Number,
   weight: String,
+  weightUnit: { type: String, enum: ["kg", "lb"], default: "kg" },
   rest: String,
   tips: [String],
   completed: { type: Boolean, default: false },

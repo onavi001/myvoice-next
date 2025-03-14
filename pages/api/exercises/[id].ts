@@ -21,12 +21,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   switch (req.method) {
     case "PUT":
       try {
-        const { name, muscleGroup, sets, reps, weight, rest, tips, completed, videos, notes } = req.body;
+        const { name, muscleGroup, sets, reps, weight, rest, tips, completed, videos, notes, weightUnit } = req.body;
         const updateData: any = {};
         if (name) updateData.name = name;
         if (muscleGroup) updateData.muscleGroup = muscleGroup;
         if (sets !== undefined) updateData.sets = sets;
         if (reps !== undefined) updateData.reps = reps;
+        if (weightUnit !== undefined) updateData.weightUnit = weightUnit;
         if (weight !== undefined) updateData.weight = weight;
         if (rest) updateData.rest = rest;
         if (tips) updateData.tips = tips;
@@ -45,6 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           muscleGroup: exercise.muscleGroup,
           sets: exercise.sets,
           reps: exercise.reps,
+          weightUnit: exercise.weightUnit,
           weight: exercise.weight,
           rest: exercise.rest,
           tips: exercise.tips,

@@ -1,4 +1,3 @@
-// pages/api/progress/[id].ts
 import { NextApiRequest, NextApiResponse } from "next";
 import {dbConnect} from "../../../lib/mongodb";
 import Progress from "../../../models/Progress";

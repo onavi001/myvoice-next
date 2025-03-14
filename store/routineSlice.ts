@@ -119,7 +119,7 @@ export const selectRoutine = createAsyncThunk(
 // Crear un día en una rutina
 export const createDay = createAsyncThunk(
   "routine/createDay",
-  async ({ routineId, dayData }: { routineId: string; dayData: { dayName: string; exercises: { name: string; sets: number; reps: number }[] } }, { getState, rejectWithValue }) => {
+  async ({ routineId, dayData }: { routineId: string; dayData: { dayName: string; exercises: { name: string; sets: number; reps: number, weightUnit: "kg" | "lb" }[] } }, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
