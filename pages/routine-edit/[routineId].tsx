@@ -5,7 +5,7 @@ import { GetServerSideProps } from "next";
 import jwt from "jsonwebtoken";
 import { dbConnect } from "../../lib/mongodb";
 import { AppDispatch, RootState } from "../../store";
-import { updateRoutine, updateDay, updateExercise } from "../../store/routineSlice";
+import { updateRoutine, updateDay, updateExercise, deleteRoutine } from "../../store/routineSlice";
 import RoutineModel from "../../models/Routine";
 import DayModel, { IDay } from "../../models/Day";
 import ExerciseModel, { IExercise } from "../../models/Exercise";
@@ -110,6 +110,18 @@ export default function RoutineEditPage({ routine: initialRoutine }: RoutineEdit
     }
   };
 
+  const handleDelete = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await dispatch(deleteRoutine(formData._id)).unwrap();
+      router.push("/routine");
+    } catch {
+      setError("Error al eliminar la rutina");
+    } finally{
+      setLoading(false);
+    }
+  }
   if (loading || reduxLoading) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Cargando...</div>;
   if (error) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Error: {error}</div>;
 
@@ -234,10 +246,11 @@ export default function RoutineEditPage({ routine: initialRoutine }: RoutineEdit
             </Button>
             <Button
               type="button"
-              onClick={() => router.push("/routine")}
+              disabled={loading}
+              onClick={handleDelete}
               className="w-1/2 bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md"
             >
-              Cancelar
+              Eliminar Rutina
             </Button>
           </div>
 

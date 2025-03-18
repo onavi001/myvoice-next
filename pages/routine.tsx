@@ -278,11 +278,19 @@ export default function RoutinePage() {
           <div className="flex flex-col space-y-1">
             <div className="flex items-center">
               <span className="text-[#B0B0B0] font-semibold text-xs min-w-[100px]">🏋️ Músculos:</span>
-              <span className="text-[#FFFFFF] text-xs flex-1">{selectedDay.musclesWorked.join(", ")}</span>
+              <ul className="list-disc pl-3 text-[#FFFFFF] text-xs  max-w-full">
+                {selectedDay.musclesWorked.map((muscle, index) => (
+                  <li key={index}>{muscle}</li>
+                ))}
+              </ul>
             </div>
             <div className="flex items-center">
               <span className="text-[#B0B0B0] font-semibold text-xs min-w-[100px]">🔥 Calentamiento:</span>
-              <span className="text-[#FFFFFF] text-xs flex-1">{selectedDay.warmupOptions.join(", ")}</span>
+              <ul className="list-disc pl-3 text-[#FFFFFF] text-xs  max-w-full">
+                {selectedDay.warmupOptions.map((option, index) => (
+                  <li key={index}>{option}</li>
+                ))}
+              </ul>
             </div>
           </div>
         </Card>

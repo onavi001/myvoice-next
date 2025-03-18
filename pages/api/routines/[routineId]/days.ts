@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   switch (req.method) {
     case "POST":
       try {
-        const { dayName, exercises } = req.body;
+        const { dayName, musclesWorked, warmupOptions, explanation, exercises } = req.body;
         const exerciseIds = [];
         for (const exData of exercises || []) {
           const exercise = new Exercise(exData);
@@ -22,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           exerciseIds.push(exercise._id);
         }
 
-        const day = new Day({ dayName, exercises: exerciseIds });
+        const day = new Day({ dayName, musclesWorked, warmupOptions, explanation, exercises: exerciseIds });
         await day.save();
 
         await Routine.findByIdAndUpdate(routineId, { $push: { days: day._id } });

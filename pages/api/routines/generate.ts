@@ -1,8 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import mongoose from "mongoose";
-import RoutineModel, { IRoutine } from "../../../models/Routine";
-import DayModel, { IDay } from "../../../models/Day";
-import ExerciseModel, { IExercise } from "../../../models/Exercise";
 import { RoutineData } from "../../../models/Routine";
 import { dbConnect } from "../../../lib/mongodb";
 
@@ -100,7 +96,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
         const data = await response.json();
         const routineData: RoutineData = JSON.parse(data.choices[0]?.message.content);
-
+        /*
         // Guardar en MongoDB reemplazando IDs ficticios con IDs reales
         const daysData: IDay[] = [];
 
@@ -172,7 +168,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             createdAt: savedRoutine.createdAt.toISOString(),
             updatedAt: savedRoutine.updatedAt.toISOString(),
         };
-        res.status(200).json(finalRoutineData);
+        */
+        res.status(200).json(routineData);
     } catch (error) {
         console.error("Error al generar rutina:", error);
         res.status(500).json({ error: "Error interno del servidor" });

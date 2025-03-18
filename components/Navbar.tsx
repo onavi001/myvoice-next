@@ -23,7 +23,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMyRoutine, onNewRoutine, onProgress, 
     <div className="bg-[#1A1A1A] p-2 shadow-sm border-b border-[#4A4A4A] z-50">
       <div className="max-w-4xl mx-auto flex justify-between items-center space-x-2">
         {/* Logo o título */}
-        <div className="flex text-white flex items-center text-lg font-semibold">
+        <div onClick={onMyRoutine} className="flex text-white flex items-center text-lg font-semibold">
           <Image src="/favicon.ico" alt="logo" width={40} height={40} className="w-10 h-10 mr-4"/>
           MyVoice
         </div>
@@ -31,8 +31,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMyRoutine, onNewRoutine, onProgress, 
           <>
             {/* Botones principales */}
             <div className="flex space-x-2">
-              <span className="max-w-auto" ><Button variant="secondary" onClick={onGenerateRoutine} className="px-4">Generar Rutina con IA</Button></span>
-              <span className="max-w-auto" ><Button onClick={onMyRoutine} className="px-4">Mi rutina</Button></span>
+              <span className="max-w-auto" ><Button variant="secondary" onClick={onGenerateRoutine} className="px-4">Rutina con IA</Button></span>
               {/* Botón de menú */}
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -47,6 +46,12 @@ const Navbar: React.FC<NavbarProps> = ({ onMyRoutine, onNewRoutine, onProgress, 
             {/* Menú desplegable */}
             {isMenuOpen && (
               <div className="absolute top-12 right-4 w-48 bg-[#2D2D2D] rounded-lg shadow-lg p-2">
+                <button
+                  onClick={onMyRoutine}
+                  className="w-full text-left px-2 py-1 text-xs text-white hover:bg-[#4A4A4A] rounded transition-colors"
+                >
+                  Mi Rutina
+                </button>
                 <button
                   onClick={onNewRoutine}
                   className="w-full text-left px-2 py-1 text-xs text-white hover:bg-[#4A4A4A] rounded transition-colors"

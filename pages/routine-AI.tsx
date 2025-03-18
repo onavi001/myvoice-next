@@ -9,6 +9,7 @@ import Button from "../components/Button";
 import Input from "../components/Input";
 import Card from "../components/Card";
 import Toast from "../components/Toast";
+import { IExercise } from "../models/Exercise";
 
 export default function RoutineAIPage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -50,19 +51,10 @@ export default function RoutineAIPage() {
     });
   };
 
-  const handleWeightUnitChange = (dayIndex: number, exerciseIndex: number, newUnit: "kg" | "lb") => {
-    if (!currentRoutine) return;
-
-    const updatedDays = [...currentRoutine.days];
-    const exercise = updatedDays[dayIndex].exercises[exerciseIndex];
-    exercise.weightUnit = newUnit; // Actualizar solo la unidad
-
-    setCurrentRoutine({ ...currentRoutine, days: updatedDays });
-  };
-
   const handleSaveRoutine = async () => {
     if (!currentRoutine) return;
-
+    console.log(currentRoutine)
+    
     try {
       const routineResult = await dispatch(
         createRoutine({ name: currentRoutine.name, days: [] })
@@ -75,14 +67,20 @@ export default function RoutineAIPage() {
             routineId,
             dayData: {
               dayName: day.dayName,
+              explanation: day.explanation,
+              warmupOptions: day.warmupOptions,
+              musclesWorked: day.musclesWorked,
               exercises: day.exercises.map((ex) => ({
+                tips: ex.tips,
+                muscleGroup: ex.muscleGroup,
+                rest: ex.rest,
                 name: ex.name,
                 sets: ex.sets,
                 reps: ex.reps,
                 weight: ex.weight,
                 weightUnit: ex.weightUnit,
                 repsUnit: ex.repsUnit,
-              })),
+              })) as IExercise[],
             },
           })
         ).unwrap();
@@ -171,7 +169,7 @@ export default function RoutineAIPage() {
       ) : (
         <div className="mt-8 max-w-md mx-auto">
           <h2 className="text-xl font-semibold text-[#34C759]">{currentRoutine.name}</h2>
-          {currentRoutine.days.map((day, dayIndex) => (
+          {currentRoutine.days.map((day) => (
             <Card
               key={day._id}
               className="mt-4 bg-[#252525] border-2 border-[#4A4A4A] p-4 rounded-md"
@@ -179,21 +177,11 @@ export default function RoutineAIPage() {
               <h3 className="text-lg font-bold">{day.dayName}</h3>
               <p className="text-[#D1D1D1] text-xs">{day.explanation}</p>
               <ul className="mt-2 space-y-2">
-                {day.exercises.map((ex, exerciseIndex) => (
+                {day.exercises.map((ex) => (
                   <li key={ex._id} className="text-sm text-[#B0B0B0] flex items-center justify-between">
                     <span>
                       {ex.name} - {ex.sets}x{ex.reps} ({ex.weight} {ex.weightUnit}) - Descanso: {ex.rest}
                     </span>
-                    <select
-                      value={ex.weightUnit}
-                      onChange={(e) =>
-                        handleWeightUnitChange(dayIndex, exerciseIndex, e.target.value as "kg" | "lb")
-                      }
-                      className="bg-[#2D2D2D] border border-[#4A4A4A] text-white p-1 rounded-md text-xs ml-2"
-                    >
-                      <option value="kg">kg</option>
-                      <option value="lb">lb</option>
-                    </select>
                   </li>
                 ))}
               </ul>

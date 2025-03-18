@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { RoutineData } from "../models/Routine";
+import { IDay } from "../models/Day";
 
 interface RoutineInput {
   level: "principiante" | "intermedio" | "avanzado";
@@ -119,7 +120,9 @@ export const selectRoutine = createAsyncThunk(
 // Crear un día en una rutina
 export const createDay = createAsyncThunk(
   "routine/createDay",
-  async ({ routineId, dayData }: { routineId: string; dayData: { dayName: string; exercises: { name: string; sets: number; reps: number, weightUnit: "kg" | "lb", repsUnit: "count" | "seconds" }[] } }, { getState, rejectWithValue }) => {
+  async (
+    { routineId, dayData }: 
+    { routineId: string; dayData: Partial<IDay> }, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
