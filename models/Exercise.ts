@@ -4,7 +4,7 @@ import { IVideo } from "./Video";
 export interface IExercise {
   _id: Types.ObjectId;
   name: string;
-  muscleGroup: string;
+  muscleGroup: string[];
   sets: number;
   reps: number;
   repsUnit: "count" | "seconds";
@@ -19,7 +19,7 @@ export interface IExercise {
 
 const ExerciseSchema: Schema = new Schema<IExercise>({
   name: { type: String, required: true },
-  muscleGroup: String,
+  muscleGroup: [String],
   sets: Number,
   reps: Number,
   repsUnit: { type: String, enum: ["count", "seconds"], default: "count" },

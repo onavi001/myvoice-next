@@ -501,7 +501,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         exercises: (day.exercises || []).map((exercise: Partial<IExercise>) => ({
           _id: exercise._id?.toString() || "",
           name: exercise.name || "",
-          muscleGroup: exercise.muscleGroup || "",
+          muscleGroup: exercise.muscleGroup || [],
           sets: exercise.sets || 0,
           reps: exercise.reps || 0,
           repsUnit: exercise.repsUnit || "count",

@@ -23,7 +23,7 @@ export interface RoutineData {
     exercises: {
       _id: string;
       name: string;
-      muscleGroup: string;
+      muscleGroup: string[];
       sets: number;
       reps: number;
       repsUnit: "count" | "seconds";

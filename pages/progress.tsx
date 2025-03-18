@@ -136,7 +136,7 @@ export default function ProgressPage() {
       routine?.name.toLowerCase().includes(query) ||
       day?.dayName.toLowerCase().includes(query) ||
       exercise?.name.toLowerCase().includes(query) ||
-      exercise?.muscleGroup?.toLowerCase().includes(query)
+      exercise?.muscleGroup.join(", ")?.toLowerCase().includes(query)
     );
   });
 

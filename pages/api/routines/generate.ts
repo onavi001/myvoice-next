@@ -54,7 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     {
                     "_id": "exercise1",
                     "name": "...",
-                    "muscleGroup": "...",
+                    "muscleGroup": ["...", "...", "..."],
                     "sets": 4,
                     "reps": 8,
                     "repsUnit": "count",
