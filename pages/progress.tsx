@@ -35,6 +35,7 @@ export default function ProgressPage() {
     sets: 0,
     reps: 0,
     weightUnit: "kg",
+    repsUnit: "count",
     weight: "",
     notes: "",
     date: new Date(),
@@ -70,7 +71,7 @@ export default function ProgressPage() {
     setExpandedCardKey((prev) => (prev === key ? null : key));
   };
 
-  const handleEditChange = (cardKey: string, field: keyof ProgressData, value: any) => {
+  const handleEditChange = (cardKey: string, field: keyof ProgressData, value: number | string) => {
     console.log(cardKey, field, value);
     setEditData((prev) => ({
       ...prev,
@@ -98,7 +99,7 @@ export default function ProgressPage() {
     });
   };
 
-  const handleAddChange = (field: keyof Omit<ProgressData, "_id" | "userId">, value: any) => {
+  const handleAddChange = (field: keyof Omit<ProgressData, "_id" | "userId">, value: number | string) => {
     setNewProgress((prev) => ({
       ...prev,
       [field]: field === "date" ? new Date(value) : value,
@@ -117,6 +118,7 @@ export default function ProgressPage() {
         sets: 0,
         reps: 0,
         weightUnit: "kg",
+        repsUnit: "count",
         weight: "",
         notes: "",
         date: new Date(),
@@ -262,7 +264,7 @@ export default function ProgressPage() {
                               />
                             </div>
                           </div>
-                          <div className="grid grid-cols-3 gap-2">
+                          <div className="grid grid-cols-4 gap-2">
                             <div>
                               <label className="text-[#D1D1D1] text-xs font-medium">Reps:</label>
                               <Input
@@ -272,6 +274,18 @@ export default function ProgressPage() {
                                 onChange={(e) => handleEditChange(cardKey, "reps", Number(e.target.value))}
                                 className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                               />
+                            </div>
+                            <div>
+                              <label className="text-[#B0B0B0]">Unidad:</label>
+                              <select
+                                name="repsUnit"
+                                value={currentEntry.repsUnit || "count"}
+                                onChange={(e) => handleEditChange(cardKey, "repsUnit", e.target.value)}
+                                className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
+                              >
+                                <option value="count">Unidades (U)</option>
+                                <option value="seconds">Segundos (S)</option>
+                              </select>
                             </div>
                             <div>
                               <label className="text-[#D1D1D1] text-xs font-medium">Peso:</label>
@@ -403,25 +417,51 @@ export default function ProgressPage() {
                   className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                 />
               </div>
-              <div>
-                <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Reps:</label>
-                <Input
-                  name="reps"
-                  type="number"
-                  value={newProgress.reps}
-                  onChange={(e) => handleAddChange("reps", Number(e.target.value))}
-                  className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Peso:</label>
-                <Input
-                  name="weight"
-                  type="text"
-                  value={newProgress.weight}
-                  onChange={(e) => handleAddChange("weight", e.target.value)}
-                  className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Reps:</label>
+                  <Input
+                    name="reps"
+                    type="number"
+                    value={newProgress.reps}
+                    onChange={(e) => handleAddChange("reps", Number(e.target.value))}
+                    className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Unidad:</label>
+                  <select
+                    name="repsUnit"
+                    value={newProgress.repsUnit}
+                    onChange={(e) => handleAddChange("repsUnit", e.target.value)}
+                    className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
+                  >
+                    <option value="count">Unidades (U)</option>
+                    <option value="seconds">Segundos (S)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Peso:</label>
+                  <Input
+                    name="weight"
+                    type="text"
+                    value={newProgress.weight}
+                    onChange={(e) => handleAddChange("weight", e.target.value)}
+                    className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Unidad:</label>
+                  <select
+                    name="weightUnit"
+                    value={newProgress.weightUnit}
+                    onChange={(e) => handleAddChange("weightUnit", e.target.value)}
+                    className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
+                  >
+                    <option value="kg">Kilos (kg)</option>
+                    <option value="lb">Libras (lb)</option>
+                  </select>
+                </div>
               </div>
               <div>
                 <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Notas:</label>

@@ -21,15 +21,11 @@ import { RoutineData } from "../models/Routine";
 import { IExercise } from "../models/Exercise";
 import { updateExercise } from "../store/routineSlice";
 import RoutineModel from "../models/Routine";
-import DayModel from "../models/Day";
+import DayModel, { IDay } from "../models/Day";
 import ExerciseModel from "../models/Exercise";
 import VideoModel, { IVideo } from "../models/Video";
 
-interface RoutinePageProps {
-  initialRoutines: RoutineData[];
-}
-
-export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
+export default function RoutinePage() {
   const dispatch = useDispatch<AppDispatch>();
   const { routines, selectedRoutineIndex, loading, error } = useSelector((state: RootState) => state.routine);
   const { user, loading: userLoading } = useSelector((state: RootState) => state.user);
@@ -68,7 +64,7 @@ export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
       );
       const data = await response.json();
       if (data.items && data.items.length > 0) {
-        const videoUrls = data.items.map((item: any) => `https://www.youtube.com/embed/${item.id.videoId}`);
+        const videoUrls = data.items.map((item: IVideo) => `https://www.youtube.com/embed/${item._id}`);
         const videos = videoUrls.map((url: string, idx: number) => ({
           url,
           isCurrent: idx === 0,
@@ -128,6 +124,7 @@ export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
             exerciseIndex,
             sets: Number(updatedExercise.sets ?? currentExercise.sets),
             reps: Number(updatedExercise.reps ?? currentExercise.reps),
+            repsUnit:  updatedExercise.repsUnit ?? currentExercise.repsUnit,
             weightUnit: updatedExercise.weightUnit ?? currentExercise.weightUnit,
             weight: updatedExercise.weight ?? currentExercise.weight ?? "",
             notes: updatedExercise.notes ?? currentExercise.notes ?? "",
@@ -143,6 +140,7 @@ export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
             exerciseData: {
               sets: Number(updatedExercise.sets ?? currentExercise.sets),
               reps: Number(updatedExercise.reps ?? currentExercise.reps),
+              repsUnit: updatedExercise.repsUnit ?? currentExercise.repsUnit,
               weightUnit: updatedExercise.weightUnit ?? currentExercise.weightUnit,
               weight: updatedExercise.weight ?? currentExercise.weight,
               notes: updatedExercise.notes ?? currentExercise.notes,
@@ -371,7 +369,7 @@ export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
                     ) : (
                       <p className="text-[#B0B0B0] italic text-center">Video no disponible</p>
                     )}
-                    <div className="grid grid-cols-2 gap-1">
+                    <div className="grid grid-cols-3 gap-1">
                       <div>
                         <label className="text-[#B0B0B0]">Series:</label>
                         <Input
@@ -393,6 +391,18 @@ export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
                             handleInputChange(selectedDayIndex, exerciseIndex, "reps", Number(e.target.value))
                           }
                         />
+                      </div>
+                      <div>
+                        <label className="text-[#B0B0B0]">Unidad Reps:</label>
+                        <select
+                          name="repsUnit"
+                          value={currentExercise.repsUnit || "count"}
+                          onChange={(e) => handleInputChange(selectedDayIndex, exerciseIndex, "repsUnit", e.target.value)}
+                          className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
+                        >
+                          <option value="count">Unidades (U)</option>
+                          <option value="seconds">Segundos (S)</option>
+                        </select>
                       </div>
                     </div>
                     <div className="grid grid-cols-3 gap-1">
@@ -445,7 +455,7 @@ export default function RoutinePage({ initialRoutines }: RoutinePageProps) {
   );
 }
 
-export const getServerSideProps: GetServerSideProps<RoutinePageProps> = async (context) => {
+export const getServerSideProps: GetServerSideProps = async (context) => {
   const token = context.req.cookies.token;
   if (!token) {
     return { redirect: { destination: "/", permanent: false } };
@@ -474,28 +484,29 @@ export const getServerSideProps: GetServerSideProps<RoutinePageProps> = async (c
       _id: r._id.toString(),
       userId: r.userId.toString(),
       name: r.name,
-      days: r.days.map((day: any) => ({
-        _id: day._id.toString(),
-        dayName: day.dayName,
+      days: r.days.map((day: Partial<IDay>) => ({
+        _id: day._id?.toString() || "",
+        dayName: day.dayName || "",
         musclesWorked: day.musclesWorked || [],
         warmupOptions: day.warmupOptions || [],
         explanation: day.explanation || "",
-        exercises: day.exercises.map((exercise: any) => ({
-          _id: exercise._id.toString(),
-          name: exercise.name,
+        exercises: (day.exercises || []).map((exercise: Partial<IExercise>) => ({
+          _id: exercise._id?.toString() || "",
+          name: exercise.name || "",
           muscleGroup: exercise.muscleGroup || "",
           sets: exercise.sets || 0,
           reps: exercise.reps || 0,
+          repsUnit: exercise.repsUnit || "count",
           weightUnit: exercise.weightUnit || "kg",
           weight: exercise.weight || "",
           rest: exercise.rest || "",
           tips: exercise.tips || [],
           completed: exercise.completed || false,
-          videos: exercise.videos.map((video: any) => ({
-            _id: video._id.toString(),
-            url: video.url,
-            isCurrent: video.isCurrent,
-          })),
+          videos: exercise.videos?.map((video: Partial<IVideo>) => ({
+            _id: video._id?.toString() || "",
+            url: video.url || "",
+            isCurrent: video.isCurrent || false,
+          })) || [],
           notes: exercise.notes || "",
         })),
       })),

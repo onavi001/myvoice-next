@@ -26,6 +26,7 @@ export interface RoutineData {
       muscleGroup: string;
       sets: number;
       reps: number;
+      repsUnit: "count" | "seconds";
       weightUnit: "kg" | "lb";
       weight: string;
       rest: string;
@@ -51,7 +52,7 @@ let RoutineModel: Model<IRoutine>;
 
 try {
   RoutineModel = model<IRoutine>("Routine", RoutineSchema);
-} catch (e) {
+} catch {
   RoutineModel = model<IRoutine>("Routine", RoutineSchema, undefined, { overwriteModels: true });
 }
 

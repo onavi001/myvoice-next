@@ -4,7 +4,6 @@ import RoutineModel, { IRoutine } from "../../../models/Routine";
 import DayModel, { IDay } from "../../../models/Day";
 import ExerciseModel, { IExercise } from "../../../models/Exercise";
 import { RoutineData } from "../../../models/Routine";
-import jwt from "jsonwebtoken";
 import { dbConnect } from "../../../lib/mongodb";
 
 interface RoutineInput {
@@ -29,13 +28,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
         const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
         if (!token) return res.status(401).json({ message: "No autenticado" });
-        let decoded;
-        try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET || "my-super-secret-key") as { userId: string };
-        } catch (error) {
-            return res.status(401).json({ message: "Token inválido" });
-        }
-        const userId = decoded.userId; // Reemplazar con el ID real del usuario autenticado (ej. desde req.user)
         
         // Prompt actualizado
         const prompt = `
@@ -69,6 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     "muscleGroup": "...",
                     "sets": 4,
                     "reps": 8,
+                    "repsUnit": "count",
                     "weight": "10-15",
                     "weightUnit": "kg",
                     "rest": "...",
@@ -112,9 +105,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const daysData: IDay[] = [];
 
         for (const day of routineData.days) {
-            const exercisesForDay: IExercise[] = day.exercises.map((ex) => ({
+            const exercisesForDay: Partial<IExercise>[] = day.exercises.map((ex) => ({
                 ...ex,
                 _id: new mongoose.Types.ObjectId(),
+                videos: ex.videos.map(() => new mongoose.Types.ObjectId()),
             }));
 
             const dayExercises = await ExerciseModel.insertMany(exercisesForDay);
@@ -163,6 +157,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     muscleGroup: ex.muscleGroup,
                     sets: ex.sets,
                     reps: ex.reps,
+                    repsUnit: ex.repsUnit,
                     weight: ex.weight,
                     weightUnit: ex.weightUnit,
                     rest: ex.rest,

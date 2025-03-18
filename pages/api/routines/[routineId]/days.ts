@@ -1,21 +1,13 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import jwt from "jsonwebtoken";
 import { dbConnect } from "../../../../lib/mongodb";
 import Routine from "../../../../models/Routine";
-import Day from "../../../../models/Day";
-import Exercise from "../../../../models/Exercise";
+import Day, { IDay } from "../../../../models/Day";
+import Exercise, { IExercise } from "../../../../models/Exercise";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await dbConnect();
   const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ message: "No autenticado" });
-
-  let decoded;
-  try {
-    decoded = jwt.verify(token, process.env.JWT_SECRET || "my-super-secret-key") as { userId: string };
-  } catch (error) {
-    return res.status(401).json({ message: "Token inválido" });
-  }
 
   const { routineId } = req.query;
 
@@ -41,11 +33,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           musclesWorked: day.musclesWorked || [],
           warmupOptions: day.warmupOptions || [],
           explanation: day.explanation || "",
-          exercises: exerciseIds.map((id: any) => ({
+          exercises: exerciseIds.map((id: Partial<IDay>) => ({
             _id: id.toString(),
-            name: exercises.find((e: any) => e._id?.toString() === id.toString())?.name || "",
-            sets: exercises.find((e: any) => e._id?.toString() === id.toString())?.sets || 0,
-            reps: exercises.find((e: any) => e._id?.toString() === id.toString())?.reps || 0,
+            name: exercises.find((e: Partial<IExercise>) => e._id?.toString() === id.toString())?.name || "",
+            sets: exercises.find((e: Partial<IExercise>) => e._id?.toString() === id.toString())?.sets || 0,
+            reps: exercises.find((e: Partial<IExercise>) => e._id?.toString() === id.toString())?.reps || 0,
+            repsUnit: exercises.find((e: Partial<IExercise>) => e._id?.toString() === id.toString())?.repsUnit || "count",
+            weightUnit: exercises.find((e: Partial<IExercise>) => e._id?.toString() === id.toString())?.weightUnit || "kg",
             weight: "",
             rest: "",
             tips: [],

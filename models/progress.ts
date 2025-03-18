@@ -7,6 +7,7 @@ export interface IProgress {
   exerciseIndex: number;
   sets: number;
   reps: number;
+  repsUnit: "count" | "seconds";
   weightUnit: "kg" | "lb";
   weight: string;
   notes: string;
@@ -20,6 +21,7 @@ export interface ProgressData {
   exerciseIndex: number;
   sets: number;
   reps: number;
+  repsUnit: "count" | "seconds";
   weightUnit: "kg" | "lb";
   weight: string;
   notes: string;
@@ -33,6 +35,7 @@ const ProgressSchema: Schema = new Schema<IProgress>({
   exerciseIndex: { type: Number, required: true },
   sets: { type: Number, required: true },
   reps: { type: Number, required: true },
+  repsUnit: { type: String, enum: ["count", "seconds"], default : "count" },
   weightUnit: { type: String, enum: ["kg", "lb"], default: "kg" },
   weight: { type: String, default: "" },
   notes: { type: String, default: "" },
@@ -43,7 +46,7 @@ let ProgressModel: Model<IProgress>;
 
 try {
   ProgressModel = model<IProgress>("Progress", ProgressSchema);
-} catch (e) {
+} catch {
   ProgressModel = model<IProgress>("Progress", ProgressSchema, undefined, { overwriteModels: true });
 }
 

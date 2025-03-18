@@ -12,8 +12,7 @@ import Head from "next/head";
 
 function AppInitializer({ children }: { children: React.ReactNode }) {
   const dispatch:AppDispatch = useDispatch();
-  const { user } = useSelector((state: RootState) => state.user);
-  const { routines ,error: routineError } = useSelector((state: RootState) => state.routine);
+  const { routines } = useSelector((state: RootState) => state.routine);
   const router = useRouter();
   const selectedRoutine = useSelector((state: RootState) => state.routine.selectedRoutineIndex);
   useEffect(() => {

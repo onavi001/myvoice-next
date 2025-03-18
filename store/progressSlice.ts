@@ -50,7 +50,7 @@ export const fetchProgress = createAsyncThunk(
       });
       if (!response.ok) throw new Error("Error al obtener progreso");
       const data = await response.json();
-      return data.map((entry: any) => ({ ...entry, date: new Date(entry.date) })) as ProgressData[];
+      return data.map((entry: ProgressData) => ({ ...entry, date: new Date(entry.date) })) as ProgressData[];
     } catch (error) {
       return rejectWithValue((error as Error).message);
     }

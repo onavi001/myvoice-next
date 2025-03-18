@@ -7,9 +7,9 @@ import { dbConnect } from "../../lib/mongodb";
 import { AppDispatch, RootState } from "../../store";
 import { updateRoutine, updateDay, updateExercise } from "../../store/routineSlice";
 import RoutineModel from "../../models/Routine";
-import DayModel from "../../models/Day";
-import ExerciseModel from "../../models/Exercise";
-import VideoModel from "../../models/Video";
+import DayModel, { IDay } from "../../models/Day";
+import ExerciseModel, { IExercise } from "../../models/Exercise";
+import VideoModel, { IVideo } from "../../models/Video";
 import { RoutineData } from "../../models/Routine";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
@@ -282,26 +282,28 @@ export const getServerSideProps: GetServerSideProps<RoutineEditProps> = async (c
       _id: routine._id.toString(),
       userId: routine.userId.toString(),
       name: routine.name,
-      days: routine.days.map((day: any) => ({
-        _id: day._id.toString(),
-        dayName: day.dayName,
+      days: routine.days.map((day: Partial<IDay>) => ({
+        _id: day._id?.toString() || "",
+        dayName: day.dayName || "",
         musclesWorked: day.musclesWorked || [],
         warmupOptions: day.warmupOptions || [],
         explanation: day.explanation || "",
-        exercises: day.exercises.map((exercise: any) => ({
-          _id: exercise._id.toString(),
-          name: exercise.name,
+        exercises: (day.exercises ?? []).map((exercise: Partial<IExercise>) => ({
+          _id: exercise._id?.toString() || "",
+          name: exercise.name || "",
           muscleGroup: exercise.muscleGroup || "",
           sets: exercise.sets || 0,
           reps: exercise.reps || 0,
+          repsUnit: exercise.repsUnit || "count",
           weight: exercise.weight || "",
+          weightUnit: exercise.weightUnit || "kg",
           rest: exercise.rest || "",
           tips: exercise.tips || [],
           completed: exercise.completed || false,
-          videos: exercise.videos.map((video: any) => ({
-            _id: video._id.toString(),
-            url: video.url,
-            isCurrent: video.isCurrent,
+          videos: (exercise.videos ?? []).map((video: Partial<IVideo>) => ({
+            _id: video._id?.toString() || "",
+            url: video.url || "",
+            isCurrent: video.isCurrent || false,
           })),
           notes: exercise.notes || "",
         })),

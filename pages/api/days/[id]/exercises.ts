@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     jwt.verify(token, process.env.JWT_SECRET || "my-super-secret-key");
-  } catch (error) {
+  } catch {
     return res.status(401).json({ message: "Token inválido" });
   }
 
@@ -32,6 +32,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           muscleGroup: exercise.muscleGroup || "",
           sets: exercise.sets,
           reps: exercise.reps,
+          repsUnit: exercise.repsUnit,
+          weightUnit: exercise.weightUnit,
           weight: exercise.weight || "",
           rest: exercise.rest || "",
           tips: exercise.tips || [],

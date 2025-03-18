@@ -1,6 +1,7 @@
-import { Schema, model, Model } from "mongoose";
+import { Schema, model, Model, Types } from "mongoose";
 
 export interface IVideo {
+  _id: Types.ObjectId;
   url: string;
   isCurrent: boolean;
 }
@@ -14,7 +15,7 @@ let VideoModel: Model<IVideo>;
 
 try {
   VideoModel = model<IVideo>("Video", VideoSchema);
-} catch (e) {
+} catch {
   VideoModel = model<IVideo>("Video", VideoSchema, undefined, { overwriteModels: true });
 }
 

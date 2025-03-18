@@ -37,7 +37,7 @@ export default function RoutineAIPage() {
     }
   }, [routines, initialFlag]);
 
-  const handleChange = (field: keyof typeof formData, value: any) => {
+  const handleChange = (field: keyof typeof formData, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -80,7 +80,8 @@ export default function RoutineAIPage() {
                 sets: ex.sets,
                 reps: ex.reps,
                 weight: ex.weight,
-                weightUnit: ex.weightUnit, // Guardar unidad separada
+                weightUnit: ex.weightUnit,
+                repsUnit: ex.repsUnit,
               })),
             },
           })
@@ -119,7 +120,7 @@ export default function RoutineAIPage() {
             />
             <select
               value={formData.level}
-              onChange={(e) => handleChange("level", e.target.value as any)}
+              onChange={(e) => handleChange("level", e.target.value)}
               className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
             >
               <option value="principiante">Principiante</option>
@@ -128,7 +129,7 @@ export default function RoutineAIPage() {
             </select>
             <select
               value={formData.goal}
-              onChange={(e) => handleChange("goal", e.target.value as any)}
+              onChange={(e) => handleChange("goal", e.target.value)}
               className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
             >
               <option value="fuerza">Fuerza</option>
@@ -145,7 +146,7 @@ export default function RoutineAIPage() {
             />
             <select
               value={formData.equipment}
-              onChange={(e) => handleChange("equipment", e.target.value as any)}
+              onChange={(e) => handleChange("equipment", e.target.value)}
               className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
             >
               <option value="gym">Gimnasio</option>

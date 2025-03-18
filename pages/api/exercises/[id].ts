@@ -1,8 +1,8 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import jwt from "jsonwebtoken";
 import { dbConnect } from "../../../lib/mongodb";
-import Exercise from "../../../models/Exercise";
-import Video from "../../../models/Video";
+import Exercise, { IExercise } from "../../../models/Exercise";
+import Video, { IVideo } from "../../../models/Video";
 import Day from "../../../models/Day";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -12,7 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     jwt.verify(token, process.env.JWT_SECRET || "my-super-secret-key");
-  } catch (error) {
+  } catch {
     return res.status(401).json({ message: "Token inválido" });
   }
 
@@ -21,12 +21,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   switch (req.method) {
     case "PUT":
       try {
-        const { name, muscleGroup, sets, reps, weight, rest, tips, completed, videos, notes, weightUnit } = req.body;
-        const updateData: any = {};
+        const { name, muscleGroup, sets, reps, weight, rest, tips, completed, videos, notes, weightUnit, repsUnit } = req.body;
+        const updateData:Partial<IExercise> = {};
         if (name) updateData.name = name;
         if (muscleGroup) updateData.muscleGroup = muscleGroup;
         if (sets !== undefined) updateData.sets = sets;
         if (reps !== undefined) updateData.reps = reps;
+        if (repsUnit !== undefined) updateData.repsUnit = repsUnit;
         if (weightUnit !== undefined) updateData.weightUnit = weightUnit;
         if (weight !== undefined) updateData.weight = weight;
         if (rest) updateData.rest = rest;
@@ -46,13 +47,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           muscleGroup: exercise.muscleGroup,
           sets: exercise.sets,
           reps: exercise.reps,
+          repsUnit: exercise.repsUnit,
           weightUnit: exercise.weightUnit,
           weight: exercise.weight,
           rest: exercise.rest,
           tips: exercise.tips,
           completed: exercise.completed,
-          videos: exercise.videos.map((v: any) => ({
-            _id: v._id.toString(),
+          videos: exercise.videos.map((v: Partial<IVideo>) => ({
+            _id: v._id?.toString(),
             url: v.url,
             isCurrent: v.isCurrent,
           })),

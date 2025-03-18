@@ -129,7 +129,7 @@ export default function ExerciseVideosPage() {
                       value={video.url}
                       //disabled
                       className="bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full disabled:opacity-70" 
-                      onChange={function (e: React.ChangeEvent<HTMLInputElement>): void {
+                      onChange={function (): void {
                         throw new Error("Function not implemented.");
                       } }                    />
                     <div className="flex space-x-2">

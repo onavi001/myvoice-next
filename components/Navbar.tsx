@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Image from 'next/image';
 import Button from "./Button";
 import { useSelector } from "react-redux";
 import { RootState } from "../store";
@@ -23,7 +24,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMyRoutine, onNewRoutine, onProgress, 
       <div className="max-w-4xl mx-auto flex justify-between items-center space-x-2">
         {/* Logo o título */}
         <div className="flex text-white flex items-center text-lg font-semibold">
-          <img src="favicon.ico" alt="logo" className="w-10 h-10 mr-4"/>
+          <Image src="/favicon.ico" alt="logo" width={40} height={40} className="w-10 h-10 mr-4"/>
           MyVoice
         </div>
         {user && 

@@ -22,7 +22,7 @@ let DayModel: Model<IDay>;
 
 try {
   DayModel = model<IDay>("Day", DaySchema);
-} catch (e) {
+} catch {
   DayModel = model<IDay>("Day", DaySchema, undefined, { overwriteModels: true });
 }
 

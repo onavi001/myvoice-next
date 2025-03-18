@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/router";
 import { AppDispatch, RootState } from "../store";
-import { createRoutine, createDay, createExercise } from "../store/routineSlice";
+import { createRoutine, createDay} from "../store/routineSlice";
 import Button from "../components/Button";
 import Input from "../components/Input";
 import Card from "../components/Card";
@@ -15,7 +15,7 @@ interface DayFormData {
 
 export default function RoutineFormPage() {
   const dispatch = useDispatch<AppDispatch>();
-  const { user, loading: userLoading } = useSelector((state: RootState) => state.user);
+  const { loading: userLoading } = useSelector((state: RootState) => state.user);
   const router = useRouter();
 
   const [routineName, setRoutineName] = useState("");
@@ -76,7 +76,7 @@ export default function RoutineFormPage() {
             routineId,
             dayData: {
               dayName: day.dayName,
-              exercises: day.exercises.map((ex) => ({ name: ex.name, sets: ex.sets, reps: ex.reps })),
+              exercises: day.exercises.map((ex) => ({ name: ex.name, sets: ex.sets, reps: ex.reps, weightUnit: "kg", repsUnit: "count" })),
             },
           })
         ).unwrap();

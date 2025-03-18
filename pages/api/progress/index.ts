@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   let decoded;
   try {
     decoded = jwt.verify(token, process.env.JWT_SECRET || "my-super-secret-key") as { userId: string };
-  } catch (error) {
+  } catch {
     return res.status(401).json({ message: "Token inválido" });
   }
 
@@ -29,6 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           exerciseIndex: p.exerciseIndex,
           sets: p.sets,
           reps: p.reps,
+          repsUnit: p.repsUnit,
           weightUnit: p.weightUnit,
           weight: p.weight,
           notes: p.notes,
@@ -42,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     case "POST":
       try {
-        const { routineId, dayIndex, exerciseIndex, sets, reps, weight, notes, date, weightUnit } = req.body;
+        const { routineId, dayIndex, exerciseIndex, sets, reps, weight, notes, date, weightUnit, repsUnit } = req.body;
         const progressEntry = new Progress({
           userId,
           routineId,
@@ -50,6 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           exerciseIndex,
           sets,
           reps,
+          repsUnit: repsUnit || "count",
           weightUnit: weightUnit || "kg",
           weight: weight || "",
           notes: notes || "",
@@ -65,6 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           exerciseIndex: progressEntry.exerciseIndex,
           sets: progressEntry.sets,
           reps: progressEntry.reps,
+          repsUnit: progressEntry.repsUnit,
           weightUnit: progressEntry.weightUnit,
           weight: progressEntry.weight,
           notes: progressEntry.notes,

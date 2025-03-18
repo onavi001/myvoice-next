@@ -2,16 +2,17 @@ import { Schema, model, Model, Types } from "mongoose";
 import { IVideo } from "./Video";
 
 export interface IExercise {
+  _id: Types.ObjectId;
   name: string;
   muscleGroup: string;
   sets: number;
   reps: number;
+  repsUnit: "count" | "seconds";
   weightUnit: "kg" | "lb";
   weight: string;
   rest: string;
   tips: string[];
   completed: boolean;
-  //videos: IVideo[];
   videos: IVideo[] | Types.ObjectId[];
   notes?: string;
 }
@@ -21,6 +22,7 @@ const ExerciseSchema: Schema = new Schema<IExercise>({
   muscleGroup: String,
   sets: Number,
   reps: Number,
+  repsUnit: { type: String, enum: ["count", "seconds"], default: "count" },
   weight: String,
   weightUnit: { type: String, enum: ["kg", "lb"], default: "kg" },
   rest: String,
@@ -34,7 +36,7 @@ let ExerciseModel: Model<IExercise>;
 
 try {
   ExerciseModel = model<IExercise>("Exercise", ExerciseSchema);
-} catch (e) {
+} catch {
   ExerciseModel = model<IExercise>("Exercise", ExerciseSchema, undefined, { overwriteModels: true });
 }
 

@@ -10,10 +10,6 @@ const nextConfig: NextConfig = {
       generator: {
         emit: false, // Evita que Next.js emita estos archivos
       },
-      reactStrictMode: true,
-      experimental: {
-        turbo: false, // Desactiva Turbopack
-      },
     });
     return config;
   },

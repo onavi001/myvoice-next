@@ -1,8 +1,9 @@
+//@typescript-eslint/no-explicit-any
 import { NextApiRequest, NextApiResponse } from "next";
 import jwt from "jsonwebtoken";
 import { dbConnect } from "../../../lib/mongodb";
 import Day from "../../../models/Day";
-import Exercise from "../../../models/Exercise";
+import Exercise, { IExercise } from "../../../models/Exercise";
 import Routine from "../../../models/Routine";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -12,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     jwt.verify(token, process.env.JWT_SECRET || "my-super-secret-key");
-  } catch (error) {
+  } catch {
     return res.status(401).json({ message: "Token inválido" });
   }
 
@@ -33,12 +34,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           musclesWorked: day.musclesWorked,
           warmupOptions: day.warmupOptions,
           explanation: day.explanation,
-          exercises: day.exercises.map((e: any) => ({
-            _id: e._id.toString(),
+          exercises: day.exercises.map((e: Partial<IExercise>) => ({
+            _id: e._id?.toString(),
             name: e.name,
             muscleGroup: e.muscleGroup,
             sets: e.sets,
             reps: e.reps,
+            repsUnit: e.repsUnit,
+            weightUnit: e.weightUnit,
             weight: e.weight,
             rest: e.rest,
             tips: e.tips,

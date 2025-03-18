@@ -18,7 +18,7 @@ let UserModel: Model<IUser>;
 
 try {
   UserModel = model<IUser>("User", UserSchema);
-} catch (e) {
+} catch {
   UserModel = model<IUser>("User", UserSchema, undefined, { overwriteModels: true });
 }
 

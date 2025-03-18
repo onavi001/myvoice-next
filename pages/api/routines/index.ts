@@ -1,9 +1,9 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import {dbConnect} from "../../../lib/mongodb";
 import Routine from "../../../models/Routine";
-import Day from "../../../models/Day";
-import Exercise from "../../../models/Exercise";
-import Video from "../../../models/Video";
+import Day, { IDay } from "../../../models/Day";
+import Exercise, { IExercise } from "../../../models/Exercise";
+import Video, { IVideo } from "../../../models/Video";
 import jwt from "jsonwebtoken";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   let decoded;
   try {
     decoded = jwt.verify(token, process.env.JWT_SECRET || "my-super-secret-key") as { userId: string };
-  } catch (error) {
+  } catch {
     return res.status(401).json({ message: "Token inválido" });
   }
 
@@ -36,25 +36,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           _id: r._id.toString(),
           userId: r.userId.toString(),
           name: r.name,
-          days: r.days.map((d: any) => ({
-            _id: d._id.toString(),
+          days: r.days.map((d: Partial<IDay>) => ({
+            _id: d._id?.toString(),
             dayName: d.dayName,
             musclesWorked: d.musclesWorked,
             warmupOptions: d.warmupOptions,
             explanation: d.explanation,
-            exercises: d.exercises.map((e: any) => ({
-              _id: e._id.toString(),
+            exercises: (d.exercises ?? []).map((e: Partial<IExercise>) => ({
+              _id: e._id?.toString(),
               name: e.name,
               muscleGroup: e.muscleGroup,
               sets: e.sets,
               reps: e.reps,
+              repsUnit: e.repsUnit,
               weightUnit: e.weightUnit,
               weight: e.weight,
               rest: e.rest,
               tips: e.tips,
               completed: e.completed,
-              videos: e.videos.map((v: any) => ({
-                _id: v._id.toString(),
+              videos: (e.videos ?? []).map((v: Partial<IVideo>) => ({
+                _id: v._id?.toString(),
                 url: v.url,
                 isCurrent: v.isCurrent,
               })),
@@ -126,24 +127,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           _id: populatedRoutine._id.toString(),
           userId: populatedRoutine.userId.toString(),
           name: populatedRoutine.name,
-          days: populatedRoutine.days.map((d: any) => ({
-            _id: d._id.toString(),
+          days: populatedRoutine.days.map((d: Partial<IDay>) => ({
+            _id: d._id?.toString(),
             dayName: d.dayName,
             musclesWorked: d.musclesWorked,
             warmupOptions: d.warmupOptions,
             explanation: d.explanation,
-            exercises: d.exercises.map((e: any) => ({
-              _id: e._id.toString(),
+            exercises: (d.exercises ?? []).map((e: Partial<IExercise>) => ({
+              _id: e._id?.toString(),
               name: e.name,
               muscleGroup: e.muscleGroup,
               sets: e.sets,
               reps: e.reps,
+              repsUnit: e.repsUnit,
+              weightUnit: e.weightUnit,
               weight: e.weight,
               rest: e.rest,
               tips: e.tips,
               completed: e.completed,
-              videos: e.videos.map((v: any) => ({
-                _id: v._id.toString(),
+              videos: (e.videos ?? []).map((v: Partial<IVideo>) => ({
+                _id: v._id?.toString(),
                 url: v.url,
                 isCurrent: v.isCurrent,
               })),
