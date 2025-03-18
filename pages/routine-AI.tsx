@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../store";
 import { createDay, createRoutine, generateRoutine } from "../store/routineSlice";
-import { RoutineData } from "../models/Routine";
+import { IRoutine, RoutineData } from "../models/Routine";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import Button from "../components/Button";
@@ -57,7 +57,7 @@ export default function RoutineAIPage() {
     
     try {
       const routineResult = await dispatch(
-        createRoutine({ name: currentRoutine.name, days: [] })
+        createRoutine({ name: currentRoutine.name, days: [] } as unknown as IRoutine)
       ).unwrap();
       const routineId = routineResult._id;
 
