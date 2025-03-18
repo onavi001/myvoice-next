@@ -68,14 +68,14 @@ export const createRoutine = createAsyncThunk(
 // Actualizar una rutina
 export const updateRoutine = createAsyncThunk(
   "routine/updateRoutine",
-  async ({ routineId, name }: { routineId: string; name: string }, { getState, rejectWithValue }) => {
+  async (routineData: RoutineData, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
-      const response = await fetch(`/api/routines/${routineId}`, {
+      const response = await fetch(`/api/routines/${routineData._id}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ routineData }),
       });
       if (!response.ok) throw new Error("Error al actualizar rutina");
       const data = await response.json();

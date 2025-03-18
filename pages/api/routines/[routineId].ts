@@ -5,6 +5,7 @@ import Routine from "../../../models/Routine";
 import Day, { IDay } from "../../../models/Day";
 import Exercise, { IExercise } from "../../../models/Exercise";
 import Video, { IVideo } from "../../../models/Video";
+import { Types } from "mongoose";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await dbConnect();
@@ -23,16 +24,58 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   switch (req.method) {
     case "PUT":
       try {
-        const { name } = req.body;
+        const { routineData } = req.body;
+        console.log(routineData)
+        //routine
         const routine = await Routine.findOneAndUpdate(
           { _id: routineId, userId: decoded.userId },
-          { name },
+          { $set: { name: routineData.name } },
           { new: true }
         )
           .populate({ path: "days", populate: { path: "exercises", populate: "videos" } })
           .lean();
         if (!routine) return res.status(404).json({ message: "Rutina no encontrada" });
+        //days
+        const { days } = routineData as { days: IDay[] };
+        days.forEach(async (day : IDay) => {
+          const newDay = await Day.findByIdAndUpdate(day._id, { 
+            dayName: day.dayName,
+            musclesWorked: day.musclesWorked,
+            warmupOptions: day.warmupOptions,
+            explanation: day.explanation
+          }, { new: true })
+          .populate("exercises")
+          .lean();
+          //si no encontramos el dia, creamos uno nuevo
+          if (!newDay){
+            const exerciseIdsForDay: Types.ObjectId[] = [];
+            day.exercises.forEach(async (exercise) => {
+              const createExercise = new Exercise({ ...exercise, videos: [] });
+              await createExercise.save();
+              exerciseIdsForDay.push(exercise._id);
+            });
+            const createDay = new Day({ ...day, exercises: exerciseIdsForDay });
+            await createDay.save();
+          };
 
+          //exercises
+          const { exercises } = day as { exercises : IExercise[]};
+          exercises.forEach(async (exercise:IExercise) => {
+            const newExercise = await Exercise.findByIdAndUpdate(exercise._id, {
+              name: exercise.name,
+              muscleGroup: exercise.muscleGroup,
+              sets: exercise.sets,
+              reps: exercise.reps,
+              rest: exercise.rest,
+              tips: exercise.tips,
+              notes: exercise.notes,
+            }, { new: true, runValidators: true })
+            .populate("videos")
+            .lean();
+            //si no encuentra ejercicio despues lo vamos a crear
+            if (!newExercise) return res.status(404).json({ message: "Ejercicio no encontrado" });
+          })
+        });
         const serializedRoutine = {
           _id: routine._id.toString(),
           userId: routine.userId.toString(),

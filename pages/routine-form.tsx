@@ -17,13 +17,68 @@ interface DayFormData extends IDay {
   isOpen: boolean;
   exercises: ExerciseFormData[];
 }
-const initialState: Partial<DayFormData> = {
-  dayName: "",
-  musclesWorked: [],
-  warmupOptions: [],
-  explanation: "",
-  exercises: [
-    {
+export default function RoutineFormPage() {
+  const dispatch = useDispatch<AppDispatch>();
+  const { loading: userLoading } = useSelector((state: RootState) => state.user);
+  const router = useRouter();
+
+  const [routineName, setRoutineName] = useState("");
+  const [days, setDays] = useState<DayFormData[]>([{
+    dayName: "",
+    musclesWorked: [],
+    warmupOptions: [],
+    explanation: "",
+    exercises: [
+      {
+        isOpen: true,
+        name: "",
+        sets: 0,
+        reps: 0,
+        muscleGroup: [],
+        repsUnit: "count",
+        weightUnit: "kg",
+        weight: "",
+        tips: [],
+        videos: [],
+        completed: false,
+        rest: "",
+      } as unknown as ExerciseFormData,
+    ],
+    isOpen: true,
+  } as unknown as DayFormData]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleAddDay = () => {
+    setDays([...days, {
+      dayName: "",
+      musclesWorked: [],
+      warmupOptions: [],
+      explanation: "",
+      exercises: [
+        {
+          isOpen: true,
+          name: "",
+          sets: 0,
+          reps: 0,
+          muscleGroup: [],
+          repsUnit: "count",
+          weightUnit: "kg",
+          weight: "",
+          tips: [],
+          videos: [],
+          completed: false,
+          rest: "",
+        } as unknown as ExerciseFormData,
+      ],
+      isOpen: true,
+    } as unknown as DayFormData]);
+  };
+
+  const handleAddExercise = (dayIndex: number) => {
+    const updatedDays: DayFormData[] = [...days];
+    updatedDays[dayIndex].exercises = updatedDays[dayIndex].exercises || [];
+    updatedDays[dayIndex].exercises.push({
       isOpen: true,
       name: "",
       sets: 0,
@@ -36,32 +91,16 @@ const initialState: Partial<DayFormData> = {
       videos: [],
       completed: false,
       rest: "",
-    } as unknown as ExerciseFormData,
-  ],
-  isOpen: true,
-}
-export default function RoutineFormPage() {
-  const dispatch = useDispatch<AppDispatch>();
-  const { loading: userLoading } = useSelector((state: RootState) => state.user);
-  const router = useRouter();
-
-  const [routineName, setRoutineName] = useState("");
-  const [days, setDays] = useState<DayFormData[]>([initialState as DayFormData]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleAddDay = () => {
-    setDays([...days, initialState as DayFormData]);
-  };
-
-  const handleAddExercise = (dayIndex: number) => {
-    const updatedDays: DayFormData[] = [...days];
-    updatedDays[dayIndex].exercises = updatedDays[dayIndex].exercises || [];
-    if (initialState.exercises) {
-      updatedDays[dayIndex].exercises.push(initialState.exercises[0] as unknown as ExerciseFormData);
-    }
+    } as unknown as ExerciseFormData,);
     setDays(updatedDays);
   };
+
+  const handleDeleteExercise = (dayIndex: number, exerciseIndex: number) => {
+    const updatedDays: DayFormData[] = [...days];
+    updatedDays[dayIndex].exercises = updatedDays[dayIndex].exercises.filter( (ex,index) => exerciseIndex !== index);
+    console.log(updatedDays)
+    setDays(updatedDays);
+  }
 
   const handleDayChange = (dayIndex: number, field: string, value: string) => {
     const updatedDays = [...days];
@@ -125,7 +164,6 @@ export default function RoutineFormPage() {
   };
 
   if (userLoading) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Cargando...</div>;
-  //if (!user) return router.push("/");
 
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
@@ -207,7 +245,7 @@ export default function RoutineFormPage() {
                         <span className="text-[#D1D1D1] text-xs">{exercise.isOpen ? "▲" : "▼"}</span>
                       </div>
                       {exercise.isOpen &&(
-                        <div>
+                        <>
                           <Input
                             name="name"
                             value={exercise.name}
@@ -270,7 +308,15 @@ export default function RoutineFormPage() {
                               />
                             </div>
                           </div>
-                        </div>
+                          <Button
+                            type="button"
+                            disabled={day.exercises.length >= 2 ? false : true}
+                            onClick={() => {handleDeleteExercise(dayIndex,exerciseIndex)}}
+                            className="mt-4 w-1/2 bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md disabled:bg-[#D32F2F] disabled:opacity-50"
+                          >
+                            Eliminar ejercicio
+                          </Button>
+                        </>
                       )}
                     </Card>
                   ))}
