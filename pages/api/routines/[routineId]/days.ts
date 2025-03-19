@@ -17,7 +17,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const { dayName, musclesWorked, warmupOptions, explanation, exercises } = req.body;
         const exerciseIds = [];
         for (const exData of exercises || []) {
-          const exercise = new Exercise(exData);
+          const exercise = new Exercise({
+            name:exData.name || "",
+            muscleGroup:exData.muscleGroup || [],
+            sets:exData.sets || 0,
+            reps:exData.reps || 0,
+            repsUnit:exData.repsUnit || "count",
+            weightUnit:exData.weightUnit || "kg",
+            weight:exData.weight || 0,
+            rest:exData.rest || "0",
+            tips:exData.tips || [],
+          } as IExercise);
           await exercise.save();
           exerciseIds.push(exercise._id);
         }
