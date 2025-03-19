@@ -94,8 +94,12 @@ export default function RoutineEditPage({ routine: initialRoutine }: RoutineEdit
   
     const handleDeleteExercise = (dayIndex: number, exerciseIndex: number) => {
       const updatedDays: DayFormData[] = [...days];
-      updatedDays[dayIndex].exercises = updatedDays[dayIndex].exercises.filter( (ex,index) => exerciseIndex !== index);
-      console.log(updatedDays)
+      updatedDays[dayIndex].exercises = updatedDays[dayIndex].exercises.filter( (_,index) => exerciseIndex !== index);
+      setDays(updatedDays);
+    }
+    const handleDeleteDay = (dayIndex: number) => {
+      let updatedDays: DayFormData[] = [...days];
+      updatedDays = updatedDays.filter((_,index) => dayIndex !== index);
       setDays(updatedDays);
     }
   
@@ -329,14 +333,23 @@ export default function RoutineEditPage({ routine: initialRoutine }: RoutineEdit
                         )}
                       </Card>
                     ))}
-                    <Button
-                      variant="secondary"
-                      type="button"
-                      onClick={() => handleAddExercise(dayIndex)}
-                      className="mt-2 w-full bg-[#66BB6A] text-black hover:bg-[#4CAF50] rounded-md py-1 px-2 text-xs font-semibold border border-[#4CAF50] shadow-md"
-                    >
-                      + Ejercicio
-                    </Button>
+                    <div className="flex space-x-2">
+                      <Button
+                        type="button"
+                        onClick={() => {handleDeleteDay(dayIndex)}}
+                        className="mt-2 w-1/2 bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md disabled:bg-[#4CAF50] disabled:opacity-50"
+                      >
+                        Eliminar Dia
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        type="button"
+                        onClick={() => handleAddExercise(dayIndex)}
+                        className="mt-2 w-full bg-[#66BB6A] text-black hover:bg-[#4CAF50] rounded-md py-1 px-2 text-xs font-semibold border border-[#4CAF50] shadow-md"
+                      >
+                        + Ejercicio
+                      </Button>
+                    </div>
                   </div>
                 )}
               </Card>

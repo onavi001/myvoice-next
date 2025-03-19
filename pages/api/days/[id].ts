@@ -5,6 +5,7 @@ import { dbConnect } from "../../../lib/mongodb";
 import Day from "../../../models/Day";
 import Exercise, { IExercise } from "../../../models/Exercise";
 import Routine from "../../../models/Routine";
+import VideoModel, { IVideo } from "../../../models/Video";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await dbConnect();
@@ -60,7 +61,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const day = await Day.findByIdAndDelete(id);
         if (!day) return res.status(404).json({ message: "Día no encontrado" });
 
+        const exercises = await Exercise.find({ _id: { $in: day.exercises } });
+        const videoIds = exercises.flatMap((exercise) => exercise.videos as unknown as IVideo);
         await Exercise.deleteMany({ _id: { $in: day.exercises } });
+        if (videoIds.length > 0) {
+          // Opción 1: Eliminar todos los videos sin verificar referencias
+          await VideoModel.deleteMany({ _id: { $in: videoIds } });
+    
+          // Opción 2: Eliminar solo videos no referenciados por otros ejercicios (más seguro)
+          /*
+          const remainingReferences = await ExerciseModel.find({ videos: { $in: videoIds } });
+          const referencedVideoIds = remainingReferences.flatMap((ex) => ex.videos);
+          const videosToDelete = videoIds.filter((vid) => !referencedVideoIds.includes(vid));
+          if (videosToDelete.length > 0) {
+            await VideoModel.deleteMany({ _id: { $in: videosToDelete } });
+          }
+          */
+        }
         await Routine.updateMany({}, { $pull: { days: id } });
         res.status(204).end();
       } catch (error) {
