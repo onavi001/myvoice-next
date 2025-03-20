@@ -68,6 +68,12 @@ export default function Home() {
         >
           {isRegister ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate"}
         </button>
+        <button
+          onClick={()=>{router.push("/forgot-password")}}
+          className="mt-2 text-[#B0B0B0] text-sm hover:text-[#34C759] w-full text-center"
+        >
+          Olvide mi contraseña
+        </button>
         {error && <p className="text-red-500 mt-2 text-center">{error}</p>}
       </div>
     </div>

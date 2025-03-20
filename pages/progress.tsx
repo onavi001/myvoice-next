@@ -53,11 +53,6 @@ export default function ProgressPage() {
       dispatch(fetchProgress());
     }
   }, [dispatch, user, routines, routineLoading]);
-  useEffect(() => {
-    if (!userLoading && !user) {
-      router.push("/");
-    }
-  }, [user, userLoading, router]);
 
   const handleBack = () => router.push("/routine");
 

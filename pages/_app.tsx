@@ -9,15 +9,23 @@ import { logout } from "../store/userSlice";
 import "../styles/globals.css";
 import Navbar from "../components/Navbar";
 import Head from "next/head";
-
+const notProtectedPath = ["/","/forgot-password","/reset-password"]
 function AppInitializer({ children }: { children: React.ReactNode }) {
   const dispatch:AppDispatch = useDispatch();
+  const { user } = useSelector((state: RootState) => state.user);
   const { routines } = useSelector((state: RootState) => state.routine);
   const router = useRouter();
   const selectedRoutine = useSelector((state: RootState) => state.routine.selectedRoutineIndex);
   useEffect(() => {
     dispatch(verifyUser());
   }, [dispatch]);
+  useEffect(() => {
+    console.log(router)
+    if (!user && !notProtectedPath.find(path => router.pathname === path)) {
+      router.push("/")
+    }
+  }, [router,user])
+  
   return (
     <>
       {
@@ -27,7 +35,6 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
           onProgress={() => router.push("/progress")}
           onLogout={() => dispatch(logout())}
           onGenerateRoutine={() => router.push("/routine-AI")}
-          
           onEditRoutine={
             router.asPath === "/routine" ? () => selectedRoutine !== null && router.push(`/routine-edit/${routines[selectedRoutine]._id}`) : undefined
           }
