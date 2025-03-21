@@ -1,4 +1,3 @@
-//@typescript-eslint/no-explicit-any
 import { NextApiRequest, NextApiResponse } from "next";
 import jwt from "jsonwebtoken";
 import { dbConnect } from "../../../lib/mongodb";

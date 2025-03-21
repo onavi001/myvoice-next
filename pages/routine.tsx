@@ -25,7 +25,7 @@ import DayModel, { IDay } from "../models/Day";
 import ExerciseModel from "../models/Exercise";
 import VideoModel, { IVideo } from "../models/Video";
 
-export default function RoutinePage() {
+export default function RoutinePage({ initialRoutines }: { initialRoutines: RoutineData[] }) {
   const dispatch = useDispatch<AppDispatch>();
   const { routines, selectedRoutineIndex, loading, error } = useSelector((state: RootState) => state.routine);
   const { user, loading: userLoading } = useSelector((state: RootState) => state.user);
@@ -35,19 +35,17 @@ export default function RoutinePage() {
   const [expandedExercises, setExpandedExercises] = useState<Record<number, boolean>>({});
   const [editData, setEditData] = useState<Record<string, Partial<IExercise>>>({});
   const [loadingVideos, setLoadingVideos] = useState<Record<number, boolean>>({});
+  const [videosVisible, setVideosVisible] = useState<Record<number, boolean>>({});
 
   const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || "TU_CLAVE_API_YOUTUBE";
   
   useEffect(() => {
-    dispatch(fetchRoutines());
-  }, [])
-  
-  
-  useEffect(() => {
-    if (user && routines.length === 0) {
+    if (initialRoutines && routines.length === 0) {
+      dispatch(fetchRoutines.fulfilled(initialRoutines, '', undefined));
+    } else if (routines.length === 0) {
       dispatch(fetchRoutines());
     }
-  }, [dispatch, user, userLoading, router]);
+  }, [dispatch, initialRoutines, routines.length]);
 
   const fetchExerciseVideo = async (
     exerciseName: string,
@@ -59,12 +57,12 @@ export default function RoutinePage() {
     try {
       const response = await fetch(
         `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(
-          `${exerciseName} exercise technique muscles`
+          `${exerciseName} técnica de ejercicio`
         )}&type=video&maxResults=5&key=${YOUTUBE_API_KEY}`
       );
       const data = await response.json();
       if (data.items && data.items.length > 0) {
-        const videoUrls = data.items.map((item: IVideo) => `https://www.youtube.com/embed/${item._id}`);
+        const videoUrls = data.items.map((item: { id: { videoId: string; }; }) => `https://www.youtube.com/embed/${item.id.videoId}`);
         const videos = videoUrls.map((url: string, idx: number) => ({
           url,
           isCurrent: idx === 0,
@@ -156,18 +154,23 @@ export default function RoutinePage() {
     }
   };
 
-  const handleChangeVideo = (
-    direction: "next" | "prev",
+  const handleVideoAction = (
+    action: "next" | "prev" | "toggle",
     routineIndex: number,
     dayIndex: number,
     exerciseIndex: number
   ) => {
     if (selectedRoutineIndex !== null) {
       const exercise = routines[routineIndex].days[dayIndex].exercises[exerciseIndex];
-      if (exercise.videos && exercise.videos.length > 1) {
+      if (action === "toggle") {
+        setVideosVisible((prev) => ({
+          ...prev,
+          [exerciseIndex]: prev[exerciseIndex] !== undefined ? !prev[exerciseIndex] : false, // Alternar visibilidad
+        }));
+      } else if (exercise.videos && exercise.videos.length > 1) {
         const currentIndex = exercise.videos.findIndex((v) => v.isCurrent);
         const newIndex =
-          direction === "next"
+          action === "next"
             ? (currentIndex + 1) % exercise.videos.length
             : (currentIndex - 1 + exercise.videos.length) % exercise.videos.length;
         const updatedVideos = exercise.videos.map((v, idx) => ({
@@ -207,7 +210,6 @@ export default function RoutinePage() {
 
   if (userLoading || loading) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Cargando...</div>;
   if (error) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Error: {error}</div>;
-  if (!user) return null;
 
   if (routines.length === 0) {
     return (
@@ -250,6 +252,7 @@ export default function RoutinePage() {
                 dispatch(selectRoutine(index));
                 setSelectedDayIndex(0);
                 setExpandedExercises({});
+                setVideosVisible({});
               }}
               className={`px-2 py-1 rounded-full text-xs font-medium transition-colors shadow-sm truncate max-w-[120px] ${
                 selectedRoutineIndex === index ? "bg-white text-black" : "bg-[#2D2D2D] text-[#B0B0B0] hover:bg-[#4A4A4A]"
@@ -301,6 +304,7 @@ export default function RoutinePage() {
             const currentExercise = { ...exercise, ...edited };
             const isExpanded = expandedExercises[exerciseIndex] || false;
             const isLoading = loadingVideos[exerciseIndex] || false;
+            const areVideosVisible = videosVisible[exerciseIndex] ?? true;
 
             return (
               <Card key={exercise._id} className="overflow-hidden">
@@ -340,33 +344,43 @@ export default function RoutinePage() {
                     </div>
                     {currentExercise.videos && currentExercise.videos.length > 0 ? (
                       <div>
-                        <iframe
-                          src={Array.isArray(currentExercise.videos) && 'isCurrent' in currentExercise.videos[0] ? (currentExercise.videos.find((v) => (v as IVideo).isCurrent) as IVideo)?.url || (currentExercise.videos[0] as IVideo).url : ""}
-                          title={`Demostración de ${exercise.name}`}
-                          className="w-full h-32 rounded border border-[#4A4A4A]"
-                          frameBorder="0"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                        />
+                        {
+                          areVideosVisible &&
+                          <iframe
+                            src={Array.isArray(currentExercise.videos) && 'isCurrent' in currentExercise.videos[0] ? (currentExercise.videos.find((v) => (v as IVideo).isCurrent) as IVideo)?.url || (currentExercise.videos[0] as IVideo).url : ""}
+                            title={`Demostración de ${exercise.name}`}
+                            className="w-full h-32 rounded border border-[#4A4A4A]"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          />
+                        }
                         {currentExercise.videos.length > 1 && (
-                          <div className="flex justify-between">
-                            <Button
+                          <div className="mt-2 flex" style={{justifyContent: "space-around"}}>
+                            {areVideosVisible && <Button
                               onClick={() =>
-                                handleChangeVideo("prev", selectedRoutineIndex, selectedDayIndex, exerciseIndex)
+                                handleVideoAction("prev", selectedRoutineIndex, selectedDayIndex, exerciseIndex)
                               }
-                              className="bg-transparent hover:bg-transparent text-white px-2 py-1 text-xs"
-                              
+                              className="w-auto bg-transparent text-white hover:bg-transparent rounded-full py-1 px-2 text-xs font-semibold border border-[#2DBF4E]"
                             >
                               {"<< Anterior"}
-                            </Button>
+                            </Button>}
                             <Button
                               onClick={() =>
-                                handleChangeVideo("next", selectedRoutineIndex, selectedDayIndex, exerciseIndex)
+                                handleVideoAction("toggle", selectedRoutineIndex, selectedDayIndex, exerciseIndex)
                               }
-                              className="bg-transparent hover:bg-transparent text-white px-2 py-1 text-xs"
+                              className="w-auto bg-transparent text-white hover:bg-transparent rounded-full py-1 px-2 text-xs font-semibold border border-[#2DBF4E]"
+                            >
+                              {areVideosVisible ? "Esconder" : "Mostrar videos"}
+                            </Button>
+                            {areVideosVisible && <Button
+                              onClick={() =>
+                                handleVideoAction("next", selectedRoutineIndex, selectedDayIndex, exerciseIndex)
+                              }
+                              className="w-auto bg-transparent text-white hover:bg-transparent rounded-full py-1 px-2 text-xs font-semibold border border-[#2DBF4E] "
                             >
                               {"Siguiente >>"}
-                            </Button>
+                            </Button>}
                           </div>
                         )}
                       </div>
