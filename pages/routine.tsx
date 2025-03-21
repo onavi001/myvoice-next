@@ -106,7 +106,6 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
   };
 
   const handleInputChange = (dayIndex: number, exerciseIndex: number, field: string, value: string | number) => {
-    console.log(dayIndex, exerciseIndex, field, value);
     if (selectedRoutineIndex !== null) {
       const key = `${dayIndex}-${exerciseIndex}`;
       setEditData((prev) => ({

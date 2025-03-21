@@ -91,16 +91,13 @@ export default function RoutineFormPage() {
   const handleDeleteExercise = (dayIndex: number, exerciseIndex: number) => {
     const updatedDays: DayFormData[] = [...days];
     updatedDays[dayIndex].exercises = updatedDays[dayIndex].exercises.filter( (ex,index) => exerciseIndex !== index);
-    console.log(updatedDays)
     setDays(updatedDays);
   }
 
   const handleDayChange = (dayIndex: number, field: string, value: string) => {
     const updatedDays = [...days];
-    console.log(value)
-    console.log(field)
     if (field === "musclesWorked" || field === "warmupOptions") {
-      updatedDays[dayIndex] = { ...updatedDays[dayIndex], [field]: value.split(", ") };
+      updatedDays[dayIndex] = { ...updatedDays[dayIndex], [field]: value.split(",") };
     }else{
       updatedDays[dayIndex] = { ...updatedDays[dayIndex], [field]: value };
     }

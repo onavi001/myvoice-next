@@ -68,7 +68,6 @@ export default function ProgressPage() {
   };
 
   const handleEditChange = (cardKey: string, field: keyof ProgressData, value: number | string) => {
-    console.log(cardKey, field, value);
     setEditData((prev) => ({
       ...prev,
       [cardKey]: { ...prev[cardKey], [field]: field === "date" ? new Date(value) : value },
@@ -337,11 +336,11 @@ export default function ProgressPage() {
               </ul>
 
               {totalPages > 1 && (
-                <div className="mt-4 flex justify-between items-center">
+                <div className="mt-4 flex justify-around items-center">
                   <Button
                     onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className="max-w-auto p-2 bg-[#4A4A4A] text-[#D1D1D1] rounded-full disabled:opacity-50 text-xs font-semibold border border-[#4A4A4A] shadow-md"
+                    className="max-w-12 p-2 bg-[#4A4A4A] text-[#D1D1D1] rounded-full disabled:opacity-50 text-xs font-semibold border border-[#4A4A4A] shadow-md"
                   >
                     ◄
                   </Button>
@@ -351,7 +350,8 @@ export default function ProgressPage() {
                   <Button
                     onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="w-auto p-2 bg-[#4A4A4A] text-[#D1D1D1] rounded-full disabled:opacity-50 text-xs font-semibold border border-[#4A4A4A] shadow-md"
+                    //style={{justifyContent: "space-around"}}
+                    className="max-w-12 p-2 bg-[#4A4A4A] text-[#D1D1D1] rounded-full disabled:opacity-50 text-xs font-semibold border border-[#4A4A4A] shadow-md"
                   >
                     ►
                   </Button>

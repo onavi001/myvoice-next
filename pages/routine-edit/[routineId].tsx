@@ -103,10 +103,8 @@ export default function RoutineEditPage({ routine: initialRoutine }: RoutineEdit
   
     const handleDayChange = (dayIndex: number, field: string, value: string) => {
       const updatedDays = [...days];
-      console.log(value)
-      console.log(field)
       if (field === "musclesWorked" || field === "warmupOptions") {
-        updatedDays[dayIndex] = { ...updatedDays[dayIndex], [field]: value.split(", ") };
+        updatedDays[dayIndex] = { ...updatedDays[dayIndex], [field]: value.split(",") };
       }else{
         updatedDays[dayIndex] = { ...updatedDays[dayIndex], [field]: value };
       }

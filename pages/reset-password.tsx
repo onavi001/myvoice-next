@@ -9,7 +9,6 @@ export default function ResetPassword() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const router = useRouter();
-  console.log(router.query)
   const { token } = router.query;
 
   useEffect(() => {

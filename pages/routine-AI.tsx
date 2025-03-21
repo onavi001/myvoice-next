@@ -53,7 +53,6 @@ export default function RoutineAIPage() {
 
   const handleSaveRoutine = async () => {
     if (!currentRoutine) return;
-    console.log(currentRoutine)
     
     try {
       const routineResult = await dispatch(
