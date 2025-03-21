@@ -41,6 +41,12 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
   const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || "TU_CLAVE_API_YOUTUBE";
   
   useEffect(() => {
+    const dayIndex = localStorage.getItem("dayIndex");
+    setSelectedDayIndex(dayIndex ? parseInt(dayIndex) : 0);
+    const routineIndex = localStorage.getItem("routineIndex");
+    dispatch(selectRoutine(routineIndex ? parseInt(routineIndex) : 0))
+  }, [])
+  useEffect(() => {
     if (initialRoutines && routines.length === 0) {
       dispatch(fetchRoutines.fulfilled(initialRoutines, '', undefined));
     } else if (routines.length === 0) {
@@ -251,6 +257,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
               key={routine._id}
               onClick={() => {
                 dispatch(selectRoutine(index));
+                localStorage.setItem("routineIndex", index.toString())
                 setSelectedDayIndex(0);
                 setExpandedExercises({});
                 setVideosVisible({});
@@ -268,7 +275,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
           {selectedRoutine.days.map((day, index) => (
             <button
               key={day._id}
-              onClick={() => setSelectedDayIndex(index)}
+              onClick={() => {setSelectedDayIndex(index);localStorage.setItem("dayIndex", index.toString());}}
               className={`px-2 py-1 rounded-full text-xs font-medium transition-colors shadow-sm truncate max-w-[120px] ${
                 selectedDayIndex === index ? "bg-white text-black" : "bg-[#2D2D2D] text-[#B0B0B0] hover:bg-[#4A4A4A]"
               }`}

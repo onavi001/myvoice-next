@@ -31,8 +31,6 @@ export default function RoutineFormPage() {
       {
         isOpen: true,
         name: "",
-        sets: 0,
-        reps: 0,
         muscleGroup: [],
         repsUnit: "count",
         weightUnit: "kg",
@@ -58,8 +56,6 @@ export default function RoutineFormPage() {
         {
           isOpen: true,
           name: "",
-          sets: 0,
-          reps: 0,
           muscleGroup: [],
           repsUnit: "count",
           weightUnit: "kg",
@@ -80,8 +76,6 @@ export default function RoutineFormPage() {
     updatedDays[dayIndex].exercises.push({
       isOpen: true,
       name: "",
-      sets: 0,
-      reps: 0,
       muscleGroup: [],
       repsUnit: "count",
       weightUnit: "kg",
@@ -264,7 +258,7 @@ export default function RoutineFormPage() {
                             placeholder="Consejos (separados por comas)"
                             className="mt-2 bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                           />
-                          <div className="mt-4 flex space-x-2">
+                          <div className="mt-4 flex items-end space-x-2">
                             <div className="w-1/3">
                               <label className="block text-[#D1D1D1] text-xs font-semibold">Series</label>
                               <Input
@@ -279,7 +273,7 @@ export default function RoutineFormPage() {
                               />
                             </div>
                             <div className="w-1/3">
-                              <label className="block text-[#D1D1D1] text-xs font-semibold">Repeticiones</label>
+                              <label className="block text-[#D1D1D1] text-xs font-semibold">Repeticiones/ segundos</label>
                               <Input
                                 name="reps"
                                 type="number"
@@ -292,7 +286,7 @@ export default function RoutineFormPage() {
                               />
                             </div>
                             <div className="w-1/3">
-                              <label className="block text-[#D1D1D1] text-xs font-semibold">Descanso</label>
+                              <label className="block text-[#D1D1D1] text-xs font-semibold">Descanso(s)</label>
                               <Input
                                 name="rest"
                                 type="number"
