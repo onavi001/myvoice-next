@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { useRouter } from "next/router";
-import { AppDispatch, RootState } from "../store";
+import { AppDispatch } from "../store";
 import { createRoutine } from "../store/routineSlice";
 import Button from "../components/Button";
 import Input from "../components/Input";
@@ -19,7 +19,6 @@ interface DayFormData extends IDay {
 }
 export default function RoutineFormPage() {
   const dispatch = useDispatch<AppDispatch>();
-  const { loading: userLoading } = useSelector((state: RootState) => state.user);
   const router = useRouter();
 
   const [routineName, setRoutineName] = useState("");
@@ -162,8 +161,6 @@ export default function RoutineFormPage() {
       setLoading(false);
     }
   };
-
-  if (userLoading) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Cargando...</div>;
 
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">

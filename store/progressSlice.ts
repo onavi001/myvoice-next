@@ -31,7 +31,7 @@ export const addProgress = createAsyncThunk(
       });
       if (!response.ok) throw new Error("Error al agregar progreso");
       const data = await response.json();
-      return { ...data, date: new Date(data.date) } as ProgressData;
+      return { ...data, date: new Date(data.date).toISOString() } as ProgressData;
     } catch (error) {
       return rejectWithValue((error as Error).message);
     }
@@ -78,7 +78,7 @@ export const editProgress = createAsyncThunk(
       });
       if (!response.ok) throw new Error("Error al editar progreso");
       const data = await response.json();
-      return { ...data, date: new Date(data.date) } as ProgressData;
+      return { ...data, date: new Date(data.date).toISOString() } as ProgressData;
     } catch (error) {
       return rejectWithValue((error as Error).message);
     }

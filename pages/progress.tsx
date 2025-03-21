@@ -11,6 +11,7 @@ import Toast from "../components/Toast";
 import { Line } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from "chart.js";
 import { ProgressData } from "../models/Progress";
+import Loader from "../components/Loader";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -167,13 +168,13 @@ export default function ProgressPage() {
     },
   };
 
-  if (userLoading || routineLoading || progressLoading) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Cargando...</div>;
+  if (userLoading || routineLoading || progressLoading) return <Loader/>;
 
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
       <style>{`.scrollbar-hidden::-webkit-scrollbar { display: none; } .scrollbar-hidden { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
 
-      <div className="bg-[#1A1A1A] p-2 shadow-sm z-30">
+      <div className="bg-[#1A1A1A] p-2 shadow-sm ">
         <div className="max-w-md mx-auto">
           <Input
             name="search"
@@ -340,7 +341,7 @@ export default function ProgressPage() {
                   <Button
                     onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className="p-2 bg-[#4A4A4A] text-[#D1D1D1] rounded-full disabled:opacity-50 text-xs font-semibold border border-[#4A4A4A] shadow-md"
+                    className="max-w-auto p-2 bg-[#4A4A4A] text-[#D1D1D1] rounded-full disabled:opacity-50 text-xs font-semibold border border-[#4A4A4A] shadow-md"
                   >
                     ◄
                   </Button>
@@ -350,7 +351,7 @@ export default function ProgressPage() {
                   <Button
                     onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="p-2 bg-[#4A4A4A] text-[#D1D1D1] rounded-full disabled:opacity-50 text-xs font-semibold border border-[#4A4A4A] shadow-md"
+                    className="w-auto p-2 bg-[#4A4A4A] text-[#D1D1D1] rounded-full disabled:opacity-50 text-xs font-semibold border border-[#4A4A4A] shadow-md"
                   >
                     ►
                   </Button>

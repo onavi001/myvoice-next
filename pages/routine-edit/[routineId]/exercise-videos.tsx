@@ -6,6 +6,7 @@ import { updateExercise } from "../../../store/routineSlice";
 import Button from "../../../components/Button";
 import Input from "../../../components/Input";
 import Card from "../../../components/Card";
+import Loader from "../../../components/Loader";
 
 interface VideoData {
   _id: string;
@@ -98,7 +99,7 @@ export default function ExerciseVideosPage() {
     }
   };
 
-  if (loading || reduxLoading) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Cargando...</div>;
+  if (loading || reduxLoading) return <Loader/>;
   if (!routineId || dayIndex === undefined || exerciseIndex === undefined) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Datos inválidos</div>;
 
   return (

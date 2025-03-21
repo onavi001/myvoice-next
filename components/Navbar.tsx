@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 import Button from "./Button";
 import { useSelector } from "react-redux";
 import { RootState } from "../store";
+import { useRouter } from "next/router";
 
 interface NavbarProps {
   onMyRoutine: () => void;
@@ -18,6 +19,10 @@ const Navbar: React.FC<NavbarProps> = ({ onMyRoutine, onNewRoutine, onProgress, 
   const { selectedRoutineIndex, routines } = useSelector((state: RootState) => state.routine);
   const { user } = useSelector((state: RootState) => state.user);
   const hasSelectedRoutine = selectedRoutineIndex !== null && routines[selectedRoutineIndex];
+  const router = useRouter();
+  useEffect(() => {
+    setIsMenuOpen(false)
+  }, [router])
   
   return (
     <div className="bg-[#1A1A1A] p-2 shadow-sm border-b border-[#4A4A4A] z-50">

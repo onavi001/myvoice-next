@@ -24,6 +24,7 @@ import RoutineModel from "../models/Routine";
 import DayModel, { IDay } from "../models/Day";
 import ExerciseModel from "../models/Exercise";
 import VideoModel, { IVideo } from "../models/Video";
+import Loader, { SmallLoader } from "../components/Loader";
 
 export default function RoutinePage({ initialRoutines }: { initialRoutines: RoutineData[] }) {
   const dispatch = useDispatch<AppDispatch>();
@@ -208,7 +209,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
     return total > 0 ? (completed / total) * 100 : 0;
   };
 
-  if (userLoading || loading) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Cargando...</div>;
+  if (userLoading || loading) return <Loader/>;
   if (error) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Error: {error}</div>;
 
   if (routines.length === 0) {
@@ -386,6 +387,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                       </div>
                     ) : isLoading ? (
                       <div className="text-center">
+                        <SmallLoader/>
                         <p className="text-[#B0B0B0] italic">Cargando video...</p>
                       </div>
                     ) : (

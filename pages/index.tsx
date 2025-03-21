@@ -14,7 +14,7 @@ export default function Home() {
   const [formData, setFormData] = useState({ username: "", email: "", password: "" });
 
   useEffect(() => {
-    if (user) router.push("/routine");
+    if (user) router.back();//router.push("/routine");
   }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -28,7 +28,7 @@ export default function Home() {
     } else {
       await dispatch(loginUser({ email: formData.email, password: formData.password }));
     }
-    if (!error && user) router.push("/routine");
+    if (!error && user) router.back();//router.push("/routine");
   };
 
   return (

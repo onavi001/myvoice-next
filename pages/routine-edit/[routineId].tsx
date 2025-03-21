@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { useRouter } from "next/router";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { GetServerSideProps } from "next";
 import jwt from "jsonwebtoken";
 import { dbConnect } from "../../lib/mongodb";
-import { AppDispatch, RootState } from "../../store";
+import { AppDispatch } from "../../store";
 import { updateRoutine, deleteRoutine } from "../../store/routineSlice";
 import RoutineModel from "../../models/Routine";
 import DayModel, { IDay } from "../../models/Day";
@@ -30,8 +30,6 @@ export default function RoutineEditPage({ routine: initialRoutine }: RoutineEdit
   const dispatch = useDispatch<AppDispatch>();
   
   const router = useRouter();
-  const { loading: userLoading } = useSelector((state: RootState) => state.user);
-  //const [formData, setFormData] = useState<RoutineData>(initialRoutine);
   const [routineName, setRoutineName] = useState(initialRoutine.name);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -176,8 +174,6 @@ export default function RoutineEditPage({ routine: initialRoutine }: RoutineEdit
         setLoading(false);
       }
     }
-    if (userLoading) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Cargando...</div>;
-  
     return (
       <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
         <div className="p-4 max-w-md mx-auto flex-1">
