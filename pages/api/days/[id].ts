@@ -48,6 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             completed: e.completed,
             videos: e.videos || [],
             notes: e.notes,
+            circuitId: e.circuitId,
           })),
         });
       } catch (error) {

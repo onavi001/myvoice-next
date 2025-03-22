@@ -12,6 +12,7 @@ import { Line } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from "chart.js";
 import { ProgressData } from "../models/Progress";
 import Loader from "../components/Loader";
+import { Types } from "mongoose";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -30,7 +31,7 @@ export default function ProgressPage() {
   const [editData, setEditData] = useState<Record<string, Partial<ProgressData>>>({});
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
   const [newProgress, setNewProgress] = useState<Omit<ProgressData, "_id" | "userId">>({
-    routineId: routines[0]?._id || "",
+    routineId: routines[0]._id.toString() || "",
     dayIndex: 0,
     exerciseIndex: 0,
     sets: 0,
@@ -74,20 +75,20 @@ export default function ProgressPage() {
     }));
   };
 
-  const handleSaveEdit = (progressId: string) => {
+  const handleSaveEdit = (progressId: Types.ObjectId) => {
     const originalEntry = progress.find((p) => p._id === progressId);
-    const updatedEntry = { ...originalEntry, ...editData[progressId] } as ProgressData;
+    const updatedEntry = { ...originalEntry, ...editData[progressId.toString()] } as ProgressData;
     dispatch(editProgress({ progressId, updatedEntry })).then(() => {
       setToastMessage("Progreso actualizado correctamente");
       setEditData((prev) => {
         const newData = { ...prev };
-        delete newData[progressId];
+        delete newData[progressId.toString()];
         return newData;
       });
     });
   };
 
-  const handleDelete = (progressId: string) => {
+  const handleDelete = (progressId: Types.ObjectId) => {
     dispatch(deleteProgress(progressId)).then(() => {
       setToastMessage("Progreso eliminado correctamente");
       setExpandedCardKey(null);
@@ -107,7 +108,7 @@ export default function ProgressPage() {
       setToastMessage("Progreso agregado correctamente");
       setShowAddForm(false);
       setNewProgress({
-        routineId: routines[0]?._id || "",
+        routineId: routines[0]?._id.toString() || "",
         dayIndex: 0,
         exerciseIndex: 0,
         sets: 0,
@@ -122,7 +123,7 @@ export default function ProgressPage() {
   };
 
   const filteredProgress = progress.filter((entry) => {
-    const routine = routines.find((r) => r._id === entry.routineId);
+    const routine = routines.find((r) => r._id.toString() === entry.routineId);
     const day = routine?.days[entry.dayIndex];
     const exercise = day?.exercises[entry.exerciseIndex];
     const query = searchQuery.toLowerCase();
@@ -212,19 +213,19 @@ export default function ProgressPage() {
             <>
               <ul className="space-y-2">
                 {paginatedProgress.map((entry) => {
-                  const routine = routines.find((r) => r._id === entry.routineId);
+                  const routine = routines.find((r) => r._id.toString() === entry.routineId);
                   const day = routine?.days[entry.dayIndex];
                   const exercise = day?.exercises[entry.exerciseIndex];
                   const cardKey = entry._id;
-                  const isExpanded = expandedCardKey === cardKey;
-                  const edited = editData[cardKey] || {};
+                  const isExpanded = expandedCardKey === cardKey.toString();
+                  const edited = editData[cardKey.toString()] || {};
                   const currentEntry = { ...entry, ...edited } as ProgressData;
 
                   return (
-                    <Card key={cardKey} className="bg-[#252525] border-2 border-[#4A4A4A] rounded-md overflow-hidden">
+                    <Card key={cardKey.toString()} className="bg-[#252525] border-2 border-[#4A4A4A] rounded-md overflow-hidden">
                       <div
                         className="flex justify-between items-center p-2 cursor-pointer hover:bg-[#3A3A3A] transition-colors"
-                        onClick={() => toggleExpandCard(cardKey)}
+                        onClick={() => toggleExpandCard(cardKey.toString())}
                       >
                         <span className="text-xs font-semibold text-white truncate">
                           {exercise?.name || "Ejercicio desconocido"}
@@ -244,7 +245,7 @@ export default function ProgressPage() {
                                 name="date"
                                 type="date"
                                 value={currentEntry.date.toISOString().split("T")[0]}
-                                onChange={(e) => handleEditChange(cardKey, "date", e.target.value)}
+                                onChange={(e) => handleEditChange(cardKey.toString(), "date", e.target.value)}
                                 className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                               />
                             </div>
@@ -254,7 +255,7 @@ export default function ProgressPage() {
                                 name="sets"
                                 type="number"
                                 value={currentEntry.sets}
-                                onChange={(e) => handleEditChange(cardKey, "sets", Number(e.target.value))}
+                                onChange={(e) => handleEditChange(cardKey.toString(), "sets", Number(e.target.value))}
                                 className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                               />
                             </div>
@@ -266,7 +267,7 @@ export default function ProgressPage() {
                                 name="reps"
                                 type="number"
                                 value={currentEntry.reps}
-                                onChange={(e) => handleEditChange(cardKey, "reps", Number(e.target.value))}
+                                onChange={(e) => handleEditChange(cardKey.toString(), "reps", Number(e.target.value))}
                                 className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                               />
                             </div>
@@ -275,7 +276,7 @@ export default function ProgressPage() {
                               <select
                                 name="repsUnit"
                                 value={currentEntry.repsUnit || "count"}
-                                onChange={(e) => handleEditChange(cardKey, "repsUnit", e.target.value)}
+                                onChange={(e) => handleEditChange(cardKey.toString(), "repsUnit", e.target.value)}
                                 className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
                               >
                                 <option value="count">Unidades (U)</option>
@@ -288,7 +289,7 @@ export default function ProgressPage() {
                                 name="weight"
                                 type="text"
                                 value={currentEntry.weight}
-                                onChange={(e) => handleEditChange(cardKey, "weight", e.target.value)}
+                                onChange={(e) => handleEditChange(cardKey.toString(), "weight", e.target.value)}
                                 className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                               />
                             </div>
@@ -297,7 +298,7 @@ export default function ProgressPage() {
                               <select
                                 name="weightUnit"
                                 value={currentEntry.weightUnit || "kg"}
-                                onChange={(e) => handleEditChange(cardKey, "weightUnit", e.target.value)}
+                                onChange={(e) => handleEditChange(cardKey.toString(), "weightUnit", e.target.value)}
                                 className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
                               >
                                 <option value="kg">Kilos (kg)</option>
@@ -309,7 +310,7 @@ export default function ProgressPage() {
                             <label className="text-[#D1D1D1] text-xs font-medium">Notas:</label>
                             <textarea
                               value={currentEntry.notes || ""}
-                              onChange={(e) => handleEditChange(cardKey, "notes", e.target.value)}
+                              onChange={(e) => handleEditChange(cardKey.toString(), "notes", e.target.value)}
                               className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs h-8 resize-none focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                             />
                           </div>
@@ -375,7 +376,7 @@ export default function ProgressPage() {
                   className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                 >
                   {routines.map((routine) => (
-                    <option key={routine._id} value={routine._id}>{routine.name}</option>
+                    <option key={routine._id.toString()} value={routine._id.toString()}>{routine.name}</option>
                   ))}
                 </select>
               </div>
@@ -386,7 +387,7 @@ export default function ProgressPage() {
                   onChange={(e) => handleAddChange("dayIndex", Number(e.target.value))}
                   className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                 >
-                  {routines.find((r) => r._id === newProgress.routineId)?.days.map((day, idx) => (
+                  {routines.find((r) => r._id.toString() === newProgress.routineId)?.days.map((day, idx) => (
                     <option key={idx} value={idx}>{day.dayName}</option>
                   ))}
                 </select>
@@ -398,7 +399,7 @@ export default function ProgressPage() {
                   onChange={(e) => handleAddChange("exerciseIndex", Number(e.target.value))}
                   className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                 >
-                  {routines.find((r) => r._id === newProgress.routineId)?.days[newProgress.dayIndex]?.exercises.map((exercise, idx) => (
+                  {routines.find((r) => r._id.toString() === newProgress.routineId)?.days[newProgress.dayIndex]?.exercises.map((exercise, idx) => (
                     <option key={idx} value={idx}>{exercise.name}</option>
                   ))}
                 </select>

@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { ProgressData } from "../models/Progress";
+import { Types } from "mongoose";
 
 interface ProgressState {
   progress: ProgressData[];
@@ -20,7 +21,7 @@ export const addProgress = createAsyncThunk(
     progressData: Omit<ProgressData, "_id" | "userId">,
     { getState, rejectWithValue }
   ) => {
-    const state = getState() as { user: { token: string; user: { _id: string } } };
+    const state = getState() as { user: { token: string; user: { _id: Types.ObjectId } } };
     const token = state.user.token;
     const userId = state.user.user._id;
     try {
@@ -61,7 +62,7 @@ export const fetchProgress = createAsyncThunk(
 export const editProgress = createAsyncThunk(
   "progress/editProgress",
   async (
-    { progressId, updatedEntry }: { progressId: string; updatedEntry: Partial<ProgressData> },
+    { progressId, updatedEntry }: { progressId: Types.ObjectId; updatedEntry: Partial<ProgressData> },
     { getState, rejectWithValue }
   ) => {
     const state = getState() as { user: { token: string } };
@@ -88,7 +89,7 @@ export const editProgress = createAsyncThunk(
 // Eliminar una entrada de progreso
 export const deleteProgress = createAsyncThunk(
   "progress/deleteProgress",
-  async (progressId: string, { getState, rejectWithValue }) => {
+  async (progressId: Types.ObjectId, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
@@ -170,7 +171,7 @@ const progressSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(deleteProgress.fulfilled, (state, action: PayloadAction<string>) => {
+      .addCase(deleteProgress.fulfilled, (state, action: PayloadAction<Types.ObjectId>) => {
         state.loading = false;
         state.progress = state.progress.filter((entry) => entry._id !== action.payload);
       })

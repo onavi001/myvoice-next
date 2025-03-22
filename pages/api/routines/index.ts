@@ -23,6 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   switch (req.method) {
     case "GET":
       try {
+        console.log("aqui")
         const routines = await Routine.find({ userId })
           .populate({
             path: "days",
@@ -151,6 +152,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 isCurrent: v.isCurrent,
               })),
               notes: e.notes,
+              circuitId: e.circuitId,
             })),
           })),
           createdAt: populatedRoutine.createdAt.toISOString(),

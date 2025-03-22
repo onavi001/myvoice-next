@@ -75,6 +75,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                   repsUnit: exData.repsUnit,
                   rest: exData.rest,
                   tips: exData.tips,
+                  circuitId: exData.circuitId,
                 },
                 { new: true }
               ).populate("videos");

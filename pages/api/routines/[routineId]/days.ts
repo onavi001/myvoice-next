@@ -27,6 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             weight:exData.weight || 0,
             rest:exData.rest || "0",
             tips:exData.tips || [],
+            circuitId: exData.circuitId,
           } as IExercise);
           await exercise.save();
           exerciseIds.push(exercise._id);
@@ -50,6 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             reps: exercises.find((e: Partial<IExercise>) => e._id?.toString() === id.toString())?.reps || 0,
             repsUnit: exercises.find((e: Partial<IExercise>) => e._id?.toString() === id.toString())?.repsUnit || "count",
             weightUnit: exercises.find((e: Partial<IExercise>) => e._id?.toString() === id.toString())?.weightUnit || "kg",
+            circuitId: exercises.find((e: Partial<IExercise>) => e._id?.toString() === id.toString())?.circuitId || "",
             weight: "",
             rest: "",
             tips: [],

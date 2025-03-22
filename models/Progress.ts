@@ -1,4 +1,4 @@
-import { Schema, model, Model } from "mongoose";
+import { Schema, model, Model, Types } from "mongoose";
 
 export interface IProgress {
   userId: Schema.Types.ObjectId;
@@ -14,7 +14,7 @@ export interface IProgress {
   date: Date;
 }
 export interface ProgressData {
-  _id: string;
+  _id: Types.ObjectId;
   userId: string; // Serializado desde Schema.Types.ObjectId
   routineId: string; // Serializado desde Schema.Types.ObjectId
   dayIndex: number;

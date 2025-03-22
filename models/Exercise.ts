@@ -15,6 +15,7 @@ export interface IExercise {
   completed: boolean;
   videos: IVideo[] | Types.ObjectId[];
   notes?: string;
+  circuitId?: string;
 }
 
 const ExerciseSchema: Schema = new Schema<IExercise>({
@@ -30,6 +31,7 @@ const ExerciseSchema: Schema = new Schema<IExercise>({
   completed: { type: Boolean, default: false },
   videos: [{ type: Schema.Types.ObjectId, ref: "Video" }],
   notes: String,
+  circuitId: String,
 });
 
 let ExerciseModel: Model<IExercise>;

@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { IRoutine, RoutineData } from "../models/Routine";
 import { IDay } from "../models/Day";
+import { Types } from "mongoose";
 
 interface RoutineInput {
   level: "principiante" | "intermedio" | "avanzado";
@@ -89,7 +90,7 @@ export const updateRoutine = createAsyncThunk(
 // Eliminar una rutina
 export const deleteRoutine = createAsyncThunk(
   "routine/deleteRoutine",
-  async (routineId: string, { getState, rejectWithValue }) => {
+  async (routineId: Types.ObjectId, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
@@ -123,7 +124,7 @@ export const createDay = createAsyncThunk(
   "routine/createDay",
   async (
     { routineId, dayData }: 
-    { routineId: string; dayData: Partial<IDay> }, { getState, rejectWithValue }) => {
+    { routineId: Types.ObjectId; dayData: Partial<IDay> }, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
@@ -144,7 +145,7 @@ export const createDay = createAsyncThunk(
 // Actualizar un día
 export const updateDay = createAsyncThunk(
   "routine/updateDay",
-  async ({ routineId, dayId, dayName }: { routineId: string; dayId: string; dayName: string }, { getState, rejectWithValue }) => {
+  async ({ routineId, dayId, dayName }: { routineId: Types.ObjectId; dayId: Types.ObjectId; dayName: string }, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
@@ -165,7 +166,7 @@ export const updateDay = createAsyncThunk(
 // Eliminar un día
 export const deleteDay = createAsyncThunk(
   "routine/deleteDay",
-  async ({ routineId, dayId }: { routineId: string; dayId: string }, { getState, rejectWithValue }) => {
+  async ({ routineId, dayId }: { routineId: Types.ObjectId; dayId: Types.ObjectId }, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
@@ -185,7 +186,7 @@ export const deleteDay = createAsyncThunk(
 export const createExercise = createAsyncThunk(
   "routine/createExercise",
   async (
-    { routineId, dayId, exerciseData }: { routineId: string; dayId: string; exerciseData: { name: string; sets: number; reps: number } },
+    { routineId, dayId, exerciseData }: { routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseData: { name: string; sets: number; reps: number } },
     { getState, rejectWithValue }
   ) => {
     const state = getState() as { user: { token: string } };
@@ -209,7 +210,7 @@ export const createExercise = createAsyncThunk(
 export const updateExercise = createAsyncThunk(
   "routine/updateExercise",
   async (
-    { routineId, dayId, exerciseId, exerciseData }: { routineId: string; dayId: string; exerciseId: string; exerciseData: Partial<RoutineData["days"][number]["exercises"][number]> },
+    { routineId, dayId, exerciseId, exerciseData }: { routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseId: Types.ObjectId; exerciseData: Partial<RoutineData["days"][number]["exercises"][number]> },
     { getState, rejectWithValue }
   ) => {
     const state = getState() as { user: { token: string } };
@@ -232,7 +233,7 @@ export const updateExercise = createAsyncThunk(
 // Eliminar un ejercicio
 export const deleteExercise = createAsyncThunk(
   "routine/deleteExercise",
-  async ({ routineId, dayId, exerciseId }: { routineId: string; dayId: string; exerciseId: string }, { getState, rejectWithValue }) => {
+  async ({ routineId, dayId, exerciseId }: { routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseId: Types.ObjectId }, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
@@ -252,7 +253,7 @@ export const deleteExercise = createAsyncThunk(
 export const updateExerciseCompleted = createAsyncThunk(
   "routine/updateExerciseCompleted",
   async (
-    { routineId, dayIndex, exerciseIndex, completed }: { routineId: string; dayIndex: number; exerciseIndex: number; completed: boolean },
+    { routineId, dayIndex, exerciseIndex, completed }: { routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; completed: boolean },
     { getState, rejectWithValue }
   ) => {
     const state = getState() as { user: { token: string }; routine: RoutineState };
@@ -278,7 +279,7 @@ export const updateExerciseCompleted = createAsyncThunk(
 export const setExerciseVideos = createAsyncThunk(
   "routine/setExerciseVideos",
   async (
-    { routineId, dayIndex, exerciseIndex, videos }: { routineId: string; dayIndex: number; exerciseIndex: number; videos: { url: string; isCurrent: boolean }[] },
+    { routineId, dayIndex, exerciseIndex, videos }: { routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; videos: { url: string; isCurrent: boolean }[] },
     { getState, rejectWithValue }
   ) => {
     const state = getState() as { user: { token: string }; routine: RoutineState };
@@ -375,7 +376,7 @@ const routineSlice = createSlice({
         state.error = action.payload as string;
       })
       // Delete Routine
-      .addCase(deleteRoutine.fulfilled, (state, action: PayloadAction<string>) => {
+      .addCase(deleteRoutine.fulfilled, (state, action: PayloadAction<Types.ObjectId>) => {
         state.routines = state.routines.filter((r) => r._id !== action.payload);
         state.selectedRoutineIndex = state.routines.length > 0 ? 0 : null;
       })
@@ -387,7 +388,7 @@ const routineSlice = createSlice({
         state.selectedRoutineIndex = action.payload;
       })
       // Create Day
-      .addCase(createDay.fulfilled, (state, action: PayloadAction<{ routineId: string; day: RoutineData["days"][number] }>) => {
+      .addCase(createDay.fulfilled, (state, action: PayloadAction<{ routineId: Types.ObjectId; day: RoutineData["days"][number] }>) => {
         const routineIndex = state.routines.findIndex((r) => r._id === action.payload.routineId);
         if (routineIndex !== -1) {
           state.routines[routineIndex].days.push(action.payload.day);
@@ -397,7 +398,7 @@ const routineSlice = createSlice({
         state.error = action.payload as string;
       })
       // Update Day
-      .addCase(updateDay.fulfilled, (state, action: PayloadAction<{ routineId: string; dayId: string; dayName: string }>) => {
+      .addCase(updateDay.fulfilled, (state, action: PayloadAction<{ routineId: Types.ObjectId; dayId: Types.ObjectId; dayName: string }>) => {
         const routineIndex = state.routines.findIndex((r) => r._id === action.payload.routineId);
         if (routineIndex !== -1) {
           const dayIndex = state.routines[routineIndex].days.findIndex((d) => d._id === action.payload.dayId);
@@ -410,7 +411,7 @@ const routineSlice = createSlice({
         state.error = action.payload as string;
       })
       // Delete Day
-      .addCase(deleteDay.fulfilled, (state, action: PayloadAction<{ routineId: string; dayId: string }>) => {
+      .addCase(deleteDay.fulfilled, (state, action: PayloadAction<{ routineId: Types.ObjectId; dayId: Types.ObjectId }>) => {
         const routineIndex = state.routines.findIndex((r) => r._id === action.payload.routineId);
         if (routineIndex !== -1) {
           state.routines[routineIndex].days = state.routines[routineIndex].days.filter((d) => d._id !== action.payload.dayId);
@@ -420,7 +421,7 @@ const routineSlice = createSlice({
         state.error = action.payload as string;
       })
       // Create Exercise
-      .addCase(createExercise.fulfilled, (state, action: PayloadAction<{ routineId: string; dayId: string; exercise: RoutineData["days"][number]["exercises"][number] }>) => {
+      .addCase(createExercise.fulfilled, (state, action: PayloadAction<{ routineId: Types.ObjectId; dayId: Types.ObjectId; exercise: RoutineData["days"][number]["exercises"][number] }>) => {
         const routineIndex = state.routines.findIndex((r) => r._id === action.payload.routineId);
         if (routineIndex !== -1) {
           const dayIndex = state.routines[routineIndex].days.findIndex((d) => d._id === action.payload.dayId);
@@ -433,7 +434,7 @@ const routineSlice = createSlice({
         state.error = action.payload as string;
       })
       // Update Exercise
-      .addCase(updateExercise.fulfilled, (state, action: PayloadAction<{ routineId: string; dayId: string; exerciseId: string; exercise: RoutineData["days"][number]["exercises"][number] }>) => {
+      .addCase(updateExercise.fulfilled, (state, action: PayloadAction<{ routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseId: Types.ObjectId; exercise: RoutineData["days"][number]["exercises"][number] }>) => {
         const routineIndex = state.routines.findIndex((r) => r._id === action.payload.routineId);
         if (routineIndex !== -1) {
           const dayIndex = state.routines[routineIndex].days.findIndex((d) => d._id === action.payload.dayId);
@@ -449,7 +450,7 @@ const routineSlice = createSlice({
         state.error = action.payload as string;
       })
       // Delete Exercise
-      .addCase(deleteExercise.fulfilled, (state, action: PayloadAction<{ routineId: string; dayId: string; exerciseId: string }>) => {
+      .addCase(deleteExercise.fulfilled, (state, action: PayloadAction<{ routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseId: Types.ObjectId }>) => {
         const routineIndex = state.routines.findIndex((r) => r._id === action.payload.routineId);
         if (routineIndex !== -1) {
           const dayIndex = state.routines[routineIndex].days.findIndex((d) => d._id === action.payload.dayId);
@@ -462,7 +463,7 @@ const routineSlice = createSlice({
         state.error = action.payload as string;
       })
       // Update Exercise Completed
-      .addCase(updateExerciseCompleted.fulfilled, (state, action: PayloadAction<{ routineId: string; dayIndex: number; exerciseIndex: number; completed: boolean }>) => {
+      .addCase(updateExerciseCompleted.fulfilled, (state, action: PayloadAction<{ routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; completed: boolean }>) => {
         const { dayIndex, exerciseIndex, completed } = action.payload;
         if (state.selectedRoutineIndex !== null) {
           state.routines[state.selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex].completed = completed;
@@ -472,7 +473,7 @@ const routineSlice = createSlice({
         state.error = action.payload as string;
       })
       // Set Exercise Videos
-      .addCase(setExerciseVideos.fulfilled, (state, action: PayloadAction<{ routineId: string; dayIndex: number; exerciseIndex: number; videos: { _id: string; url: string; isCurrent: boolean }[] }>) => {
+      .addCase(setExerciseVideos.fulfilled, (state, action: PayloadAction<{ routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; videos: { _id: Types.ObjectId; url: string; isCurrent: boolean }[] }>) => {
         const { dayIndex, exerciseIndex, videos } = action.payload;
         if (state.selectedRoutineIndex !== null) {
           state.routines[state.selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex].videos = videos;

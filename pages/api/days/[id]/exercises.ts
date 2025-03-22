@@ -40,6 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           completed: exercise.completed || false,
           videos: [],
           notes: exercise.notes || "",
+          circuitId: exercise.circuitId
         });
       } catch (error) {
         res.status(500).json({ message: "Error al crear ejercicio", error });

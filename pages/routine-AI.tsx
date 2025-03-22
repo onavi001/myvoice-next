@@ -170,14 +170,14 @@ export default function RoutineAIPage() {
           <h2 className="text-xl font-semibold text-[#34C759]">{currentRoutine.name}</h2>
           {currentRoutine.days.map((day) => (
             <Card
-              key={day._id}
+              key={day._id.toString()}
               className="mt-4 bg-[#252525] border-2 border-[#4A4A4A] p-4 rounded-md"
             >
               <h3 className="text-lg font-bold">{day.dayName}</h3>
               <p className="text-[#D1D1D1] text-xs">{day.explanation}</p>
               <ul className="mt-2 space-y-2">
                 {day.exercises.map((ex) => (
-                  <li key={ex._id} className="text-sm text-[#B0B0B0] flex items-center justify-between">
+                  <li key={ex._id.toString()} className="text-sm text-[#B0B0B0] flex items-center justify-between">
                     <span>
                       {ex.name} - {ex.sets}x{ex.reps} ({ex.weight} {ex.weightUnit}) - Descanso: {ex.rest}
                     </span>

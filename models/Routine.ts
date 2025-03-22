@@ -11,17 +11,17 @@ export interface IRoutine {
 
 // Tipo plano para el frontend
 export interface RoutineData {
-  _id: string;
-  userId: string;
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
   name: string;
   days: {
-    _id: string;
+    _id: Types.ObjectId;
     dayName: string;
     musclesWorked: string[];
     warmupOptions: string[];
     explanation: string;
     exercises: {
-      _id: string;
+      _id: Types.ObjectId;
       name: string;
       muscleGroup: string[];
       sets: number;
@@ -32,8 +32,9 @@ export interface RoutineData {
       rest: string;
       tips: string[];
       completed: boolean;
-      videos: { _id: string; url: string; isCurrent: boolean }[];
+      videos: { _id: Types.ObjectId; url: string; isCurrent: boolean }[];
       notes?: string;
+      circuitId?: string;
     }[];
   }[];
   createdAt: string;
