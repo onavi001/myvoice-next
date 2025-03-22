@@ -7,12 +7,8 @@ import Button from "../../../components/Button";
 import Input from "../../../components/Input";
 import Card from "../../../components/Card";
 import Loader from "../../../components/Loader";
-
-interface VideoData {
-  _id: string;
-  url: string;
-  isCurrent: boolean;
-}
+import { IVideo } from "../../../models/Video";
+import { Types } from "mongoose";
 
 export default function ExerciseVideosPage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -20,7 +16,7 @@ export default function ExerciseVideosPage() {
   const router = useRouter();
   const { routineId, dayIndex, exerciseIndex } = router.query;
 
-  const [videos, setVideos] = useState<VideoData[]>([]);
+  const [videos, setVideos] = useState<IVideo[]>([]);
   const [newVideoUrl, setNewVideoUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +24,7 @@ export default function ExerciseVideosPage() {
   // Cargar videos iniciales desde la rutina
   useEffect(() => {
     if (routineId && dayIndex && exerciseIndex && routines.length > 0) {
-      const routine = routines.find((r) => r._id === routineId);
+      const routine = routines.find((r) => r._id.toString() === routineId);
       if (routine) {
         const day = routine.days[Number(dayIndex)];
         if (day) {
@@ -46,16 +42,17 @@ export default function ExerciseVideosPage() {
       setError("La URL del video no puede estar vacía");
       return;
     }
-    setVideos([...videos, { _id: `${Date.now()}`, url: newVideoUrl, isCurrent: false }]);
+    //quitar id temporal al crear video
+    setVideos([...videos, { _id: new Types.ObjectId(`${Date.now()}`), url: newVideoUrl, isCurrent: false }]);
     setNewVideoUrl("");
     setError(null);
   };
 
-  const handleRemoveVideo = (videoId: string) => {
+  const handleRemoveVideo = (videoId: Types.ObjectId) => {
     setVideos(videos.filter((video) => video._id !== videoId));
   };
 
-  const handleSetCurrent = (videoId: string) => {
+  const handleSetCurrent = (videoId: Types.ObjectId) => {
     setVideos(
       videos.map((video) => ({
         ...video,
@@ -70,7 +67,7 @@ export default function ExerciseVideosPage() {
     setError(null);
 
     try {
-      const routine = routines.find((r) => r._id === routineId);
+      const routine = routines.find((r) => r._id.toString() === routineId);
       if (!routine || dayIndex === undefined || exerciseIndex === undefined) {
         throw new Error("Datos inválidos");
       }
@@ -80,7 +77,7 @@ export default function ExerciseVideosPage() {
 
       await dispatch(
         updateExercise({
-          routineId: routineId as string,
+          routineId: new Types.ObjectId(routineId?.toString()),
           dayId: day._id,
           exerciseId: exercise._id,
           exerciseData: {
@@ -118,7 +115,7 @@ export default function ExerciseVideosPage() {
               ) : (
                 videos.map((video, videoIndex) => (
                   <div
-                    key={video._id}
+                    key={video._id.toString()}
                     className="space-y-1 border-t border-[#3A3A3A] pt-2"
                   >
                     <label className="block text-[#D1D1D1] text-xs font-semibold">

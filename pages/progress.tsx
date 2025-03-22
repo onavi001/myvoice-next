@@ -13,6 +13,13 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 import { ProgressData } from "../models/Progress";
 import Loader from "../components/Loader";
 import { Types } from "mongoose";
+import { GetServerSideProps } from "next";
+import { dbConnect } from "../lib/mongodb";
+import RoutineModel from "../models/Routine";
+import ProgressModel from "../models/Progress";
+import DayModel, { IDay } from "../models/Day";
+import ExerciseModel, { IExercise } from "../models/Exercise";
+import jwt from "jsonwebtoken";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -520,3 +527,83 @@ export default function ProgressPage() {
     </div>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const token = context.req.cookies.token;
+  if (!token) {
+    return { redirect: { destination: "/", permanent: false } };
+  }
+
+  try {
+    await dbConnect();
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "my-super-secret-key") as { userId: string };
+
+    const routines = await RoutineModel.find({ userId: decoded.userId })
+      .populate({
+        path: "days",
+        model: DayModel,
+        populate: {
+          path: "exercises",
+          model: ExerciseModel,
+        },
+      })
+      .lean();
+
+    const progress = await ProgressModel.find({ userId: decoded.userId }).lean();
+
+    const serializedRoutines = routines.map((r) => ({
+      _id: r._id.toString(),
+      userId: r.userId.toString(),
+      name: r.name,
+      days: r.days.map((day: Partial<IDay>) => ({
+        _id: day._id?.toString() || "",
+        dayName: day.dayName || "",
+        musclesWorked: day.musclesWorked || [],
+        warmupOptions: day.warmupOptions || [],
+        explanation: day.explanation || "",
+        exercises: (day.exercises || []).map((exercise: Partial<IExercise>) => ({
+          _id: exercise._id?.toString() || "",
+          name: exercise.name || "",
+          muscleGroup: exercise.muscleGroup || [],
+          sets: exercise.sets || 0,
+          reps: exercise.reps || 0,
+          repsUnit: exercise.repsUnit || "count",
+          weightUnit: exercise.weightUnit || "kg",
+          weight: exercise.weight || "",
+          rest: exercise.rest || "",
+          tips: exercise.tips || [],
+          completed: exercise.completed || false,
+          notes: exercise.notes || "",
+          circuitId: exercise.circuitId || "",
+        })),
+      })),
+      createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: r.updatedAt ? new Date(r.updatedAt).toISOString() : new Date().toISOString(),
+    }));
+
+    const serializedProgress = progress.map((p) => ({
+      _id: p._id.toString(),
+      userId: p.userId.toString(),
+      routineId: p.routineId.toString(),
+      dayIndex: p.dayIndex,
+      exerciseIndex: p.exerciseIndex,
+      sets: p.sets || 0,
+      reps: p.reps || 0,
+      repsUnit: p.repsUnit || "count",
+      weightUnit: p.weightUnit || "kg",
+      weight: p.weight || "",
+      notes: p.notes || "",
+      date: p.date ? new Date(p.date).toISOString() : new Date().toISOString(),
+    }));
+
+    return {
+      props: {
+        initialRoutines: serializedRoutines,
+        initialProgress: serializedProgress,
+      },
+    };
+  } catch (error) {
+    console.error("Error en getServerSideProps:", error);
+    return { redirect: { destination: "/", permanent: false } };
+  }
+};
