@@ -3,17 +3,17 @@ import { useRouter } from "next/router";
 import { useDispatch } from "react-redux";
 import { GetServerSideProps } from "next";
 import jwt from "jsonwebtoken";
-import { dbConnect } from "../../../lib/mongodb";
-import { AppDispatch } from "../../../store";
-import { updateRoutine, deleteRoutine } from "../../../store/routineSlice";
-import RoutineModel from "../../../models/Routine";
-import DayModel, { IDay } from "../../../models/Day";
-import ExerciseModel, { IExercise } from "../../../models/Exercise";
-import VideoModel, { IVideo } from "../../../models/Video";
-import { RoutineData } from "../../../models/Routine";
-import Button from "../../../components/Button";
-import Input from "../../../components/Input";
-import Card from "../../../components/Card";
+import { dbConnect } from "../../lib/mongodb";
+import { AppDispatch } from "../../store";
+import { updateRoutine, deleteRoutine } from "../../store/routineSlice";
+import RoutineModel from "../../models/Routine";
+import DayModel, { IDay } from "../../models/Day";
+import ExerciseModel, { IExercise } from "../../models/Exercise";
+import VideoModel, { IVideo } from "../../models/Video";
+import { RoutineData } from "../../models/Routine";
+import Button from "../../components/Button";
+import Input from "../../components/Input";
+import Card from "../../components/Card";
 import { Types } from "mongoose";
 
 interface ExerciseFormData extends IExercise {

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "../../../../store";
-import { updateExercise } from "../../../../store/routineSlice";
-import Button from "../../../../components/Button";
-import Input from "../../../../components/Input";
-import Card from "../../../../components/Card";
-import Loader from "../../../../components/Loader";
-import { IVideo } from "../../../../models/Video";
+import { AppDispatch, RootState } from "../../../store";
+import { updateExercise } from "../../../store/routineSlice";
+import Button from "../../../components/Button";
+import Input from "../../../components/Input";
+import Card from "../../../components/Card";
+import Loader from "../../../components/Loader";
+import { IVideo } from "../../../models/Video";
 import { Types } from "mongoose";
 
 export default function ExerciseVideosPage() {
