@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "../store";
-import { createDay, createRoutine, generateRoutine } from "../store/routineSlice";
-import { IRoutine, RoutineData } from "../models/Routine";
+import { AppDispatch, RootState } from "../../store";
+import { createDay, createRoutine, generateRoutine } from "../../store/routineSlice";
+import { IRoutine, RoutineData } from "../../models/Routine";
 import { useRouter } from "next/router";
 import Head from "next/head";
-import Button from "../components/Button";
-import Input from "../components/Input";
-import Card from "../components/Card";
-import Toast from "../components/Toast";
-import { IExercise } from "../models/Exercise";
+import Button from "../../components/Button";
+import Input from "../../components/Input";
+import Card from "../../components/Card";
+import Toast from "../../components/Toast";
+import { IExercise } from "../../models/Exercise";
 
 export default function RoutineAIPage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -87,7 +87,7 @@ export default function RoutineAIPage() {
 
       setToastMessage("Rutina guardada correctamente");
       setCurrentRoutine(null);
-      setTimeout(() => router.push("/routine"), 1000);
+      setTimeout(() => router.push("/app/routine"), 1000);
     } catch (err) {
       console.error("Error al guardar rutina:", err);
       setToastMessage("Error al guardar la rutina");

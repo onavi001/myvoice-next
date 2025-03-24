@@ -214,7 +214,7 @@ export default function RoutineEditPage({ routine: initialRoutine }: RoutineEdit
       await dispatch(
         updateRoutine({ name: routineName, _id: initialRoutine._id, days: cleanedDays } as unknown as RoutineData)
       ).unwrap();
-      router.push("/routine");
+      router.push("/app/routine");
     } catch (err) {
       setError("Error al crear la rutina");
       console.error(err);
@@ -228,7 +228,7 @@ export default function RoutineEditPage({ routine: initialRoutine }: RoutineEdit
     setError(null);
     try {
       await dispatch(deleteRoutine(initialRoutine._id)).unwrap();
-      router.push("/routine");
+      router.push("/app/routine");
     } catch {
       setError("Error al eliminar la rutina");
     } finally {

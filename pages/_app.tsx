@@ -1,52 +1,58 @@
+// pages/_app.tsx
 import { AppProps } from "next/app";
 import { Provider } from "react-redux";
 import { AppDispatch, RootState, store } from "../store";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { verifyUser } from "../store/userSlice";
+import { verifyUser, logout } from "../store/userSlice";
 import { useRouter } from "next/router";
-import { logout } from "../store/userSlice";
 import "../styles/globals.css";
 import Navbar from "../components/Navbar";
 import Head from "next/head";
 import Loader from "../components/Loader";
-const notProtectedPath = ["/","/forgot-password","/reset-password"]
+
 function AppInitializer({ children }: { children: React.ReactNode }) {
-  const dispatch:AppDispatch = useDispatch();
-  const { user, loading, error, token } = useSelector((state: RootState) => state.user);
+  const dispatch: AppDispatch = useDispatch();
+  const { loading, token } = useSelector((state: RootState) => state.user);
   const { routines } = useSelector((state: RootState) => state.routine);
-  const router = useRouter();
-  
   const selectedRoutine = useSelector((state: RootState) => state.routine.selectedRoutineIndex);
+  const router = useRouter();
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
   useEffect(() => {
-    dispatch(verifyUser());
-  }, []);
+    dispatch(verifyUser()).finally(() => setIsInitialLoad(false));
+  }, [dispatch]);
   useEffect(() => {
-    if (!token && !notProtectedPath.find(path => router.pathname === path)) {
-      router.back();
+    if (isInitialLoad) return;
+    if (!token && router.pathname === "/") {
+      router.replace("/login");
+    } else if (token && router.pathname === "/login") {
+      router.push("/app");
     }
-  }, [router,user,loading,error,token])
-  
+  }, [token, router.pathname, isInitialLoad, router]);
+
+  // Mostrar Navbar solo en rutas protegidas bajo /app
+  const showNavbar = token && router.pathname.startsWith("/app");
+
+  if (isInitialLoad || loading) return <Loader />;
+
   return (
     <>
-      {
+      {showNavbar && (
         <Navbar
-          onMyRoutine={() => router.push("/routine")}
-          onNewRoutine={() => router.push("/routine-form")}
-          onProgress={() => router.push("/progress")}
-          onLogout={() => dispatch(logout())}
-          onGenerateRoutine={() => router.push("/routine-AI")}
+          onMyRoutine={() => router.push("/app/routine")}
+          onNewRoutine={() => router.push("/app/routine-form")}
+          onProgress={() => router.push("/app/progress")}
+          onLogout={() => {dispatch(logout());router.push("/")}}
+          onGenerateRoutine={() => router.push("/app/routine-AI")}
           onEditRoutine={
-            router.asPath === "/routine" ? () => selectedRoutine !== null && router.push(`/routine-edit/${routines[selectedRoutine]._id}`) : undefined
+            router.pathname === "/app/routine" && selectedRoutine !== null && routines[selectedRoutine]
+              ? () => router.push(`/app/routine-edit/${routines[selectedRoutine]._id}`)
+              : undefined
           }
-        />      
-      }
-      {
-        loading ?
-        <Loader/>
-        :
-        children
-      }
+        />
+      )}
+      {children}
     </>
   );
 }
@@ -59,8 +65,8 @@ function MyApp({ Component, pageProps }: AppProps) {
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-        <link rel="manifest" href="/site.webmanifest" /> {/* Opcional */}
-        <title>My Voice</title> {/* Opcional: título global */}
+        <link rel="manifest" href="/site.webmanifest" />
+        <title>My Voice</title>
       </Head>
       <Provider store={store}>
         <AppInitializer>
@@ -70,4 +76,5 @@ function MyApp({ Component, pageProps }: AppProps) {
     </>
   );
 }
+
 export default MyApp;

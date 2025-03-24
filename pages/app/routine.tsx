@@ -1,30 +1,30 @@
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { RootState, AppDispatch } from "../store";
+import { RootState, AppDispatch } from "../../store";
 import {
   fetchRoutines,
   selectRoutine,
   updateExerciseCompleted,
   setExerciseVideos,
-} from "../store/routineSlice";
-import { addProgress } from "../store/progressSlice";
+} from "../../store/routineSlice";
+import { addProgress } from "../../store/progressSlice";
 import { useRouter } from "next/router";
 import { GetServerSideProps } from "next";
 import jwt from "jsonwebtoken";
-import { dbConnect } from "../lib/mongodb";
-import Button from "../components/Button";
-import Input from "../components/Input";
-import Textarea from "../components/Textarea";
-import ProgressBar from "../components/ProgressBar";
-import Card from "../components/Card";
-import { RoutineData } from "../models/Routine";
-import { IExercise } from "../models/Exercise";
-import { updateExercise } from "../store/routineSlice";
-import RoutineModel from "../models/Routine";
-import DayModel, { IDay } from "../models/Day";
-import ExerciseModel from "../models/Exercise";
-import VideoModel, { IVideo } from "../models/Video";
-import Loader, { SmallLoader } from "../components/Loader";
+import { dbConnect } from "../../lib/mongodb";
+import Button from "../../components/Button";
+import Input from "../../components/Input";
+import Textarea from "../../components/Textarea";
+import ProgressBar from "../../components/ProgressBar";
+import Card from "../../components/Card";
+import { RoutineData } from "../../models/Routine";
+import { IExercise } from "../../models/Exercise";
+import { updateExercise } from "../../store/routineSlice";
+import RoutineModel from "../../models/Routine";
+import DayModel, { IDay } from "../../models/Day";
+import ExerciseModel from "../../models/Exercise";
+import VideoModel, { IVideo } from "../../models/Video";
+import Loader, { SmallLoader } from "../../components/Loader";
 import { Types } from "mongoose";
 
 export default function RoutinePage({ initialRoutines }: { initialRoutines: RoutineData[] }) {
@@ -242,9 +242,9 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
         <div className="p-4 max-w-md mx-auto mt-16">
           <h2 className="text-sm font-semibold text-white mb-3 truncate">Tu Rutina</h2>
           <p className="text-[#B0B0B0] text-xs">No hay rutinas generadas. Genera una desde la página principal.</p>
-          <Button onClick={() => router.push("/routine-AI")} className="mt-3">Generar Rutina con IA</Button>
-          <Button onClick={() => router.push("/routine-form")} className="mt-3">Agregar Rutina Manual</Button>
-          <Button onClick={() => router.push("/")} className="mt-3">Volver</Button>
+          <Button onClick={() => router.push("/app/routine-AI")} className="mt-3">Generar Rutina con IA</Button>
+          <Button onClick={() => router.push("/app/routine-form")} className="mt-3">Agregar Rutina Manual</Button>
+          <Button onClick={() => router.push("/app")} className="mt-3">Volver</Button>
         </div>
       </div>
     );
@@ -256,8 +256,8 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
         <div className="p-4 max-w-md mx-auto mt-16">
           <h2 className="text-sm font-semibold text-white mb-3 truncate">Tu Rutina</h2>
           <p className="text-[#B0B0B0] text-xs">Selecciona una rutina para ver los detalles.</p>
-          <Button onClick={() => router.push("/routine-form")} className="mt-3">Agregar Rutina Manual</Button>
-          <Button variant="secondary" onClick={() => router.push("/")} className="mt-3">Volver</Button>
+          <Button onClick={() => router.push("/app/routine-form")} className="mt-3">Agregar Rutina Manual</Button>
+          <Button variant="secondary" onClick={() => router.push("/app")} className="mt-3">Volver</Button>
         </div>
       </div>
     );

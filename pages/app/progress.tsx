@@ -1,29 +1,35 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useSelector, useDispatch } from "react-redux";
-import { AppDispatch, RootState } from "../store";
-import { addProgress, editProgress, deleteProgress, clearProgress, fetchProgress } from "../store/progressSlice";
-import { fetchRoutines } from "../store/routineSlice";
-import Button from "../components/Button";
-import Input from "../components/Input";
-import Card from "../components/Card";
-import Toast from "../components/Toast";
+import { AppDispatch, RootState } from "../../store";
+import { addProgress, editProgress, deleteProgress, clearProgress, fetchProgress } from "../../store/progressSlice";
+import { fetchRoutines } from "../../store/routineSlice";
+import Button from "../../components/Button";
+import Input from "../../components/Input";
+import Card from "../../components/Card";
+import Toast from "../../components/Toast";
 import { Line } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from "chart.js";
-import { ProgressData } from "../models/Progress";
-import Loader from "../components/Loader";
+import { ProgressData } from "../../models/Progress";
+import Loader from "../../components/Loader";
 import { Types } from "mongoose";
 import { GetServerSideProps } from "next";
-import { dbConnect } from "../lib/mongodb";
-import RoutineModel from "../models/Routine";
-import ProgressModel from "../models/Progress";
-import DayModel, { IDay } from "../models/Day";
-import ExerciseModel, { IExercise } from "../models/Exercise";
+import { dbConnect } from "../../lib/mongodb";
+import RoutineModel, { RoutineData } from "../../models/Routine";
+import ProgressModel from "../../models/Progress";
+import DayModel, { IDay } from "../../models/Day";
+import ExerciseModel, { IExercise } from "../../models/Exercise";
 import jwt from "jsonwebtoken";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-export default function ProgressPage() {
+export default function ProgressPage({
+  initialRoutines,
+  initialProgress,
+}: {
+  initialRoutines: RoutineData[];
+  initialProgress: ProgressData[];
+}) {
   const dispatch = useDispatch<AppDispatch>();
   const { progress, loading: progressLoading } = useSelector((state: RootState) => state.progress);
   const { routines, loading: routineLoading } = useSelector((state: RootState) => state.routine);
@@ -38,7 +44,7 @@ export default function ProgressPage() {
   const [editData, setEditData] = useState<Record<string, Partial<ProgressData>>>({});
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
   const [newProgress, setNewProgress] = useState<Omit<ProgressData, "_id" | "userId">>({
-    routineId: routines[0]._id.toString() || "",
+    routineId: "", // Inicializamos como vacío y lo actualizamos en useEffect
     dayIndex: 0,
     exerciseIndex: 0,
     sets: 0,
@@ -51,19 +57,31 @@ export default function ProgressPage() {
   });
   const itemsPerPage = 5;
 
+  // Actualizar routineId cuando routines o initialRoutines estén disponibles
+  useEffect(() => {
+    const firstRoutineId =
+      routines[0]?._id.toString() || initialRoutines[0]?._id.toString() || "";
+    if (firstRoutineId && newProgress.routineId !== firstRoutineId) {
+      setNewProgress((prev) => ({
+        ...prev,
+        routineId: firstRoutineId,
+      }));
+    }
+  }, [routines, initialRoutines]);
+
   useEffect(() => {
     if (user && !routines.length && !routineLoading) {
-      dispatch(fetchRoutines());
+      dispatch(fetchRoutines.fulfilled(initialRoutines, "", undefined));
     }
-  }, [dispatch, user]);
+  }, [dispatch, user, initialRoutines, routineLoading]);
 
   useEffect(() => {
     if (user && !progress.length && !progressLoading) {
-      dispatch(fetchProgress());
+      dispatch(fetchProgress.fulfilled(initialProgress, "", undefined));
     }
-  }, [dispatch, user, routines, routineLoading]);
+  }, [dispatch, user, initialProgress, progressLoading]);
 
-  const handleBack = () => router.push("/routine");
+  const handleBack = () => router.push("/app/routine");
 
   const handleClear = () => {
     dispatch(clearProgress()).then(() => setToastMessage("Progreso limpiado correctamente"));
@@ -111,11 +129,15 @@ export default function ProgressPage() {
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newProgress.routineId) {
+      setToastMessage("Por favor, selecciona una rutina válida.");
+      return;
+    }
     dispatch(addProgress(newProgress)).then(() => {
       setToastMessage("Progreso agregado correctamente");
       setShowAddForm(false);
       setNewProgress({
-        routineId: routines[0]?._id.toString() || "",
+        routineId: routines[0]?._id.toString() || initialRoutines[0]?._id.toString() || "",
         dayIndex: 0,
         exerciseIndex: 0,
         sets: 0,
@@ -150,7 +172,7 @@ export default function ProgressPage() {
   );
 
   const chartData = {
-    labels: filteredProgress.map((entry) => entry.date.toLocaleDateString()),
+    labels: filteredProgress.map((entry) => new Date(entry.date).toLocaleDateString()),
     datasets: [
       {
         label: "Peso (kg)",
@@ -175,13 +197,24 @@ export default function ProgressPage() {
     },
   };
 
-  if (userLoading || routineLoading || progressLoading) return <Loader/>;
+  if (userLoading || routineLoading || progressLoading) return <Loader />;
+
+  if (!routines.length && !initialRoutines.length) {
+    return (
+      <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col items-center justify-center">
+        <p className="text-[#D1D1D1] text-xs mb-4">No hay rutinas disponibles para mostrar progreso.</p>
+        <Button onClick={handleBack} className="bg-[#42A5F5] text-black p-2 rounded-full shadow-md hover:bg-[#1E88E5]">
+          Volver a Rutinas
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
       <style>{`.scrollbar-hidden::-webkit-scrollbar { display: none; } .scrollbar-hidden { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
 
-      <div className="bg-[#1A1A1A] p-2 shadow-sm ">
+      <div className="bg-[#1A1A1A] p-2 shadow-sm">
         <div className="max-w-md mx-auto">
           <Input
             name="search"
@@ -193,7 +226,12 @@ export default function ProgressPage() {
           />
           <div className="flex justify-between mt-2">
             <label className="flex items-center text-[#D1D1D1] text-xs">
-              <input type="checkbox" checked={showChart} onChange={() => setShowChart(!showChart)} className="mr-2 accent-[#34C759]" />
+              <input
+                type="checkbox"
+                checked={showChart}
+                onChange={() => setShowChart(!showChart)}
+                className="mr-2 accent-[#34C759]"
+              />
               Ver gráfica
             </label>
             <Button
@@ -229,7 +267,10 @@ export default function ProgressPage() {
                   const currentEntry = { ...entry, ...edited } as ProgressData;
 
                   return (
-                    <Card key={cardKey.toString()} className="bg-[#252525] border-2 border-[#4A4A4A] rounded-md overflow-hidden">
+                    <Card
+                      key={cardKey.toString()}
+                      className="bg-[#252525] border-2 border-[#4A4A4A] rounded-md overflow-hidden"
+                    >
                       <div
                         className="flex justify-between items-center p-2 cursor-pointer hover:bg-[#3A3A3A] transition-colors"
                         onClick={() => toggleExpandCard(cardKey.toString())}
@@ -244,14 +285,16 @@ export default function ProgressPage() {
                           <p className="text-[#D1D1D1]">
                             {routine?.name || "Rutina desconocida"} - {day?.dayName || "Día desconocido"}
                           </p>
-                          <p className="text-[#B0B0B0]">Músculo: {exercise?.muscleGroup || "Desconocido"}</p>
+                          <p className="text-[#B0B0B0]">
+                            Músculo: {exercise?.muscleGroup?.join(", ") || "Desconocido"}
+                          </p>
                           <div className="grid grid-cols-2 gap-2">
                             <div>
                               <label className="text-[#D1D1D1] text-xs font-medium">Fecha:</label>
                               <Input
                                 name="date"
                                 type="date"
-                                value={currentEntry.date.toISOString().split("T")[0]}
+                                value={new Date(currentEntry.date).toISOString().split("T")[0]}
                                 onChange={(e) => handleEditChange(cardKey.toString(), "date", e.target.value)}
                                 className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                               />
@@ -262,7 +305,9 @@ export default function ProgressPage() {
                                 name="sets"
                                 type="number"
                                 value={currentEntry.sets}
-                                onChange={(e) => handleEditChange(cardKey.toString(), "sets", Number(e.target.value))}
+                                onChange={(e) =>
+                                  handleEditChange(cardKey.toString(), "sets", Number(e.target.value))
+                                }
                                 className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                               />
                             </div>
@@ -274,7 +319,9 @@ export default function ProgressPage() {
                                 name="reps"
                                 type="number"
                                 value={currentEntry.reps}
-                                onChange={(e) => handleEditChange(cardKey.toString(), "reps", Number(e.target.value))}
+                                onChange={(e) =>
+                                  handleEditChange(cardKey.toString(), "reps", Number(e.target.value))
+                                }
                                 className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                               />
                             </div>
@@ -323,7 +370,6 @@ export default function ProgressPage() {
                           </div>
                           <div className="flex space-x-2 mt-2">
                             <Button
-                              
                               onClick={() => handleSaveEdit(cardKey)}
                               className="w-full bg-[#66BB6A] text-black hover:bg-[#4CAF50] rounded-md py-1 px-2 text-xs font-semibold border border-[#4CAF50] shadow-md"
                             >
@@ -358,7 +404,6 @@ export default function ProgressPage() {
                   <Button
                     onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    //style={{justifyContent: "space-around"}}
                     className="max-w-12 p-2 bg-[#4A4A4A] text-[#D1D1D1] rounded-full disabled:opacity-50 text-xs font-semibold border border-[#4A4A4A] shadow-md"
                   >
                     ►
@@ -383,7 +428,9 @@ export default function ProgressPage() {
                   className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                 >
                   {routines.map((routine) => (
-                    <option key={routine._id.toString()} value={routine._id.toString()}>{routine.name}</option>
+                    <option key={routine._id.toString()} value={routine._id.toString()}>
+                      {routine.name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -394,9 +441,13 @@ export default function ProgressPage() {
                   onChange={(e) => handleAddChange("dayIndex", Number(e.target.value))}
                   className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                 >
-                  {routines.find((r) => r._id.toString() === newProgress.routineId)?.days.map((day, idx) => (
-                    <option key={idx} value={idx}>{day.dayName}</option>
-                  ))}
+                  {routines
+                    .find((r) => r._id.toString() === newProgress.routineId)
+                    ?.days.map((day, idx) => (
+                      <option key={idx} value={idx}>
+                        {day.dayName || `Día ${idx + 1}`}
+                      </option>
+                    ))}
                 </select>
               </div>
               <div>
@@ -406,9 +457,13 @@ export default function ProgressPage() {
                   onChange={(e) => handleAddChange("exerciseIndex", Number(e.target.value))}
                   className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
                 >
-                  {routines.find((r) => r._id.toString() === newProgress.routineId)?.days[newProgress.dayIndex]?.exercises.map((exercise, idx) => (
-                    <option key={idx} value={idx}>{exercise.name}</option>
-                  ))}
+                  {routines
+                    .find((r) => r._id.toString() === newProgress.routineId)
+                    ?.days[newProgress.dayIndex]?.exercises.map((exercise, idx) => (
+                      <option key={idx} value={idx}>
+                        {exercise.name || `Ejercicio ${idx + 1}`}
+                      </option>
+                    ))}
                 </select>
               </div>
               <div>
@@ -455,7 +510,7 @@ export default function ProgressPage() {
                   />
                 </div>
                 <div>
-                <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Unidad:</label>
+                  <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Unidad:</label>
                   <select
                     name="weightUnit"
                     value={newProgress.weightUnit}
@@ -531,7 +586,7 @@ export default function ProgressPage() {
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const token = context.req.cookies.token;
   if (!token) {
-    return { redirect: { destination: "/", permanent: false } };
+    return { redirect: { destination: "/login", permanent: false } };
   }
 
   try {
@@ -604,6 +659,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     };
   } catch (error) {
     console.error("Error en getServerSideProps:", error);
-    return { redirect: { destination: "/", permanent: false } };
+    return { redirect: { destination: "/login", permanent: false } };
   }
 };

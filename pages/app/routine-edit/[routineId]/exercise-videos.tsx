@@ -87,7 +87,7 @@ export default function ExerciseVideosPage() {
         })
       ).unwrap();
 
-      router.push(`/routine-edit/${routineId}`);
+      router.push(`/app/routine-edit/${routineId}`);
     } catch (err) {
       setError("Error al actualizar los videos");
       console.error(err);
@@ -184,7 +184,7 @@ export default function ExerciseVideosPage() {
             </Button>
             <Button
               type="button"
-              onClick={() => router.push(`/routine-edit/${routineId}`)}
+              onClick={() => router.push(`/app/routine-edit/${routineId}`)}
               className="w-1/2 bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md"
             >
               Cancelar

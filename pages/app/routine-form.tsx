@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { useRouter } from "next/router";
-import { AppDispatch } from "../store";
-import { createRoutine } from "../store/routineSlice";
-import Button from "../components/Button";
-import Input from "../components/Input";
-import Card from "../components/Card";
-import { IExercise } from "../models/Exercise";
-import { IDay } from "../models/Day";
-import { IRoutine } from "../models/Routine";
+import { AppDispatch } from "../../store";
+import { createRoutine } from "../../store/routineSlice";
+import Button from "../../components/Button";
+import Input from "../../components/Input";
+import Card from "../../components/Card";
+import { IExercise } from "../../models/Exercise";
+import { IDay } from "../../models/Day";
+import { IRoutine } from "../../models/Routine";
 import { Types } from "mongoose";
 
 interface ExerciseFormData extends IExercise {
@@ -212,7 +212,7 @@ export default function RoutineFormPage() {
     });
     try {
       await dispatch(createRoutine({ name: routineName, days: cleanedDays } as unknown as IRoutine)).unwrap();
-      router.push("/routine");
+      router.push("/app/routine");
     } catch (err) {
       setError("Error al crear la rutina");
       console.error(err);
@@ -665,7 +665,7 @@ export default function RoutineFormPage() {
             </Button>
             <Button
               type="button"
-              onClick={() => router.push("/routine")}
+              onClick={() => router.push("/app/routine")}
               className="w-1/2 bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md disabled:bg-[#4CAF50] disabled:opacity-50"
             >
               Cancelar

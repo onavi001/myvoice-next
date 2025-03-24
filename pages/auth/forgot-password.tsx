@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
-import Input from "../components/Input";
-import Button from "../components/Button";
+import Input from "../../components/Input";
+import Button from "../../components/Button";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -23,7 +23,7 @@ export default function ForgotPassword() {
       const data = await res.json();
       if (res.ok) {
         setMessage(data.message);
-        setTimeout(() => router.push("/"), 3000);
+        setTimeout(() => router.push("/login"), 3000);
       } else {
         setError(data.message);
       }
