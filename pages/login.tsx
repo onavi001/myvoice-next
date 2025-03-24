@@ -9,6 +9,7 @@ import Input from "../components/Input";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import gymAI from "../public/gymAI.png";
+import Link from "next/link";
 
 export default function Login() {
   const dispatch: AppDispatch = useDispatch();
@@ -163,12 +164,12 @@ export default function Login() {
               >
                 {isRegister ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate"}
               </button>
-              <a
+              <Link
                 href="/auth/forgot-password"
                 className="block w-full text-center hover:text-[#34C759] transition-colors"
               >
                 ¿Olvidaste tu contraseña?
-              </a>
+              </Link>
             </motion.div>
           </div>
 
