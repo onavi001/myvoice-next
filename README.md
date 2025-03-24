@@ -1,7 +1,7 @@
 ```markdown
 # My Voice
 
-![My Voice Logo](public/favicon.ico)
+![My Voice Logo](https://raw.githubusercontent.com/onavi001/myvoice-next/refs/heads/main/public/favicon.ico)
 
 **My Voice** es una aplicación web diseñada para ayudarte a crear, seguir y optimizar tus rutinas de entrenamiento físico. Con un enfoque en la personalización y el seguimiento del progreso, esta herramienta es ideal para entusiastas del fitness que buscan llevar sus entrenamientos al siguiente nivel.
 
