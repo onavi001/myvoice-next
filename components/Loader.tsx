@@ -11,9 +11,13 @@ const Loader: React.FC = () => {
   );
 };
 
-export const SmallLoader: React.FC = () => {
+interface SmallLoaderProps {
+  classNameLoader?: string;
+}
+
+export const SmallLoader: React.FC<SmallLoaderProps> = ({ classNameLoader }) => {
   return (
-    <div className="flex flex-col items-center">
+    <div className={"flex flex-col items-center"+classNameLoader}>
       <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-[#34C759] border-solid"></div>
     </div>
   );

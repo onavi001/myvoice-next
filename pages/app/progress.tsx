@@ -55,7 +55,7 @@ export default function ProgressPage({
     notes: "",
     date: new Date(),
   });
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
 
   // Actualizar routineId cuando routines o initialRoutines estén disponibles
   useEffect(() => {

@@ -123,8 +123,9 @@ export const selectRoutine = createAsyncThunk(
 export const createDay = createAsyncThunk(
   "routine/createDay",
   async (
-    { routineId, dayData }: 
-    { routineId: Types.ObjectId; dayData: Partial<IDay> }, { getState, rejectWithValue }) => {
+    { routineId, dayData }: { routineId: Types.ObjectId; dayData: Partial<IDay> },
+    { getState, rejectWithValue }
+  ) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
@@ -145,7 +146,10 @@ export const createDay = createAsyncThunk(
 // Actualizar un día
 export const updateDay = createAsyncThunk(
   "routine/updateDay",
-  async ({ routineId, dayId, dayName }: { routineId: Types.ObjectId; dayId: Types.ObjectId; dayName: string }, { getState, rejectWithValue }) => {
+  async (
+    { routineId, dayId, dayName }: { routineId: Types.ObjectId; dayId: Types.ObjectId; dayName: string },
+    { getState, rejectWithValue }
+  ) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
@@ -166,7 +170,10 @@ export const updateDay = createAsyncThunk(
 // Eliminar un día
 export const deleteDay = createAsyncThunk(
   "routine/deleteDay",
-  async ({ routineId, dayId }: { routineId: Types.ObjectId; dayId: Types.ObjectId }, { getState, rejectWithValue }) => {
+  async (
+    { routineId, dayId }: { routineId: Types.ObjectId; dayId: Types.ObjectId },
+    { getState, rejectWithValue }
+  ) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
@@ -186,7 +193,11 @@ export const deleteDay = createAsyncThunk(
 export const createExercise = createAsyncThunk(
   "routine/createExercise",
   async (
-    { routineId, dayId, exerciseData }: { routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseData: { name: string; sets: number; reps: number } },
+    {
+      routineId,
+      dayId,
+      exerciseData,
+    }: { routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseData: { name: string; sets: number; reps: number } },
     { getState, rejectWithValue }
   ) => {
     const state = getState() as { user: { token: string } };
@@ -210,7 +221,17 @@ export const createExercise = createAsyncThunk(
 export const updateExercise = createAsyncThunk(
   "routine/updateExercise",
   async (
-    { routineId, dayId, exerciseId, exerciseData }: { routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseId: Types.ObjectId; exerciseData: Partial<RoutineData["days"][number]["exercises"][number]> },
+    {
+      routineId,
+      dayId,
+      exerciseId,
+      exerciseData,
+    }: {
+      routineId: Types.ObjectId;
+      dayId: Types.ObjectId;
+      exerciseId: Types.ObjectId;
+      exerciseData: Partial<RoutineData["days"][number]["exercises"][number]>;
+    },
     { getState, rejectWithValue }
   ) => {
     const state = getState() as { user: { token: string } };
@@ -233,7 +254,10 @@ export const updateExercise = createAsyncThunk(
 // Eliminar un ejercicio
 export const deleteExercise = createAsyncThunk(
   "routine/deleteExercise",
-  async ({ routineId, dayId, exerciseId }: { routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseId: Types.ObjectId }, { getState, rejectWithValue }) => {
+  async (
+    { routineId, dayId, exerciseId }: { routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseId: Types.ObjectId },
+    { getState, rejectWithValue }
+  ) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
@@ -253,12 +277,19 @@ export const deleteExercise = createAsyncThunk(
 export const updateExerciseCompleted = createAsyncThunk(
   "routine/updateExerciseCompleted",
   async (
-    { routineId, dayIndex, exerciseIndex, completed }: { routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; completed: boolean },
+    {
+      routineId,
+      dayIndex,
+      exerciseIndex,
+      completed,
+    }: { routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; completed: boolean },
     { getState, rejectWithValue }
   ) => {
     const state = getState() as { user: { token: string }; routine: RoutineState };
     const token = state.user.token;
-    const exerciseId = state.routine.routines[state.routine.selectedRoutineIndex!].days[dayIndex].exercises[exerciseIndex]._id;
+    const exerciseId = state.routine.routines[state.routine.selectedRoutineIndex!].days[dayIndex].exercises[
+      exerciseIndex
+    ]._id;
 
     try {
       const response = await fetch(`/api/exercises/${exerciseId}`, {
@@ -279,12 +310,19 @@ export const updateExerciseCompleted = createAsyncThunk(
 export const setExerciseVideos = createAsyncThunk(
   "routine/setExerciseVideos",
   async (
-    { routineId, dayIndex, exerciseIndex, videos }: { routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; videos: { url: string; isCurrent: boolean }[] },
+    {
+      routineId,
+      dayIndex,
+      exerciseIndex,
+      videos,
+    }: { routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; videos: { url: string; isCurrent: boolean }[] },
     { getState, rejectWithValue }
   ) => {
     const state = getState() as { user: { token: string }; routine: RoutineState };
     const token = state.user.token;
-    const exerciseId = state.routine.routines[state.routine.selectedRoutineIndex!].days[dayIndex].exercises[exerciseIndex]._id;
+    const exerciseId = state.routine.routines[state.routine.selectedRoutineIndex!].days[dayIndex].exercises[
+      exerciseIndex
+    ]._id;
 
     try {
       // Crear o actualizar videos
@@ -316,6 +354,7 @@ export const setExerciseVideos = createAsyncThunk(
   }
 );
 
+// Generar una rutina
 export const generateRoutine = createAsyncThunk(
   "routine/generateRoutine",
   async (input: RoutineInput, { rejectWithValue }) => {
@@ -455,7 +494,9 @@ const routineSlice = createSlice({
         if (routineIndex !== -1) {
           const dayIndex = state.routines[routineIndex].days.findIndex((d) => d._id === action.payload.dayId);
           if (dayIndex !== -1) {
-            state.routines[routineIndex].days[dayIndex].exercises = state.routines[routineIndex].days[dayIndex].exercises.filter((e) => e._id !== action.payload.exerciseId);
+            state.routines[routineIndex].days[dayIndex].exercises = state.routines[routineIndex].days[dayIndex].exercises.filter(
+              (e) => e._id !== action.payload.exerciseId
+            );
           }
         }
       })
@@ -482,6 +523,7 @@ const routineSlice = createSlice({
       .addCase(setExerciseVideos.rejected, (state, action) => {
         state.error = action.payload as string;
       })
+      // Generate Routine
       .addCase(generateRoutine.pending, (state) => {
         state.loading = true;
         state.error = null;

@@ -28,7 +28,7 @@ import Loader, { SmallLoader } from "../../components/Loader";
 import { Types } from "mongoose";
 
 export default function RoutinePage({ initialRoutines }: { initialRoutines: RoutineData[] }) {
-  console.log(initialRoutines)
+  console.log(initialRoutines);
   const dispatch = useDispatch<AppDispatch>();
   const { routines, selectedRoutineIndex, loading, error } = useSelector((state: RootState) => state.routine);
   const { user, loading: userLoading } = useSelector((state: RootState) => state.user);
@@ -39,6 +39,9 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
   const [editData, setEditData] = useState<Record<string, Partial<IExercise>>>({});
   const [loadingVideos, setLoadingVideos] = useState<Record<number, boolean>>({});
   const [videosVisible, setVideosVisible] = useState<Record<number, boolean>>({});
+  const [savingProgress, setSavingProgress] = useState<Record<string, boolean>>({}); // Loader para guardar progreso
+  const [togglingCompleted, setTogglingCompleted] = useState<Record<number, boolean>>({}); // Loader para completar ejercicios
+  const [switchingVideos, setSwitchingVideos] = useState<Record<number, boolean>>({}); // Loader para cambiar videos
 
   const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || "TU_CLAVE_API_YOUTUBE";
 
@@ -47,7 +50,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
     setSelectedDayIndex(dayIndex ? parseInt(dayIndex) : 0);
     const routineIndex = localStorage.getItem("routineIndex");
     dispatch(selectRoutine(routineIndex ? parseInt(routineIndex) : 0));
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     if (initialRoutines && routines.length === 0) {
@@ -63,6 +66,11 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
     dayIndex: number,
     exerciseIndex: number
   ) => {
+    const exercise = routines[routineIndex]?.days[dayIndex]?.exercises[exerciseIndex];
+    if (exercise?.videos?.length > 0) {
+      return;
+    }
+
     setLoadingVideos((prev) => ({ ...prev, [exerciseIndex]: true }));
     try {
       const response = await fetch(
@@ -118,51 +126,58 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
     }
   };
 
-  const handleSave = (dayIndex: number, exerciseIndex: number) => {
+  const handleSave = async (dayIndex: number, exerciseIndex: number) => {
     if (selectedRoutineIndex !== null && user) {
       const key = `${dayIndex}-${exerciseIndex}`;
-      const updatedExercise = editData[key];
-      if (updatedExercise) {
-        const currentExercise = routines[selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex];
-        dispatch(
-          addProgress({
-            routineId: routines[selectedRoutineIndex]._id.toString(),
-            dayIndex,
-            exerciseIndex,
-            sets: Number(updatedExercise.sets ?? currentExercise.sets),
-            reps: Number(updatedExercise.reps ?? currentExercise.reps),
-            repsUnit: updatedExercise.repsUnit ?? currentExercise.repsUnit,
-            weightUnit: updatedExercise.weightUnit ?? currentExercise.weightUnit,
-            weight: updatedExercise.weight ?? currentExercise.weight ?? "",
-            notes: updatedExercise.notes ?? currentExercise.notes ?? "",
-            date: new Date(),
-          })
-        );
-        dispatch(
-          updateExercise({
-            routineId: routines[selectedRoutineIndex]._id,
-            dayId: routines[selectedRoutineIndex].days[dayIndex]._id,
-            exerciseId: currentExercise._id,
-            exerciseData: {
+      setSavingProgress((prev) => ({ ...prev, [key]: true }));
+      try {
+        const updatedExercise = editData[key];
+        if (updatedExercise) {
+          const currentExercise = routines[selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex];
+          await dispatch(
+            addProgress({
+              routineId: routines[selectedRoutineIndex]._id.toString(),
+              dayIndex,
+              exerciseIndex,
               sets: Number(updatedExercise.sets ?? currentExercise.sets),
               reps: Number(updatedExercise.reps ?? currentExercise.reps),
               repsUnit: updatedExercise.repsUnit ?? currentExercise.repsUnit,
               weightUnit: updatedExercise.weightUnit ?? currentExercise.weightUnit,
-              weight: updatedExercise.weight ?? currentExercise.weight,
-              notes: updatedExercise.notes ?? currentExercise.notes,
-            },
-          })
-        );
-        setEditData((prev) => {
-          const newData = { ...prev };
-          delete newData[key];
-          return newData;
-        });
+              weight: updatedExercise.weight ?? currentExercise.weight ?? "",
+              notes: updatedExercise.notes ?? currentExercise.notes ?? "",
+              date: new Date(),
+            })
+          ).unwrap();
+          await dispatch(
+            updateExercise({
+              routineId: routines[selectedRoutineIndex]._id,
+              dayId: routines[selectedRoutineIndex].days[dayIndex]._id,
+              exerciseId: currentExercise._id,
+              exerciseData: {
+                sets: Number(updatedExercise.sets ?? currentExercise.sets),
+                reps: Number(updatedExercise.reps ?? currentExercise.reps),
+                repsUnit: updatedExercise.repsUnit ?? currentExercise.repsUnit,
+                weightUnit: updatedExercise.weightUnit ?? currentExercise.weightUnit,
+                weight: updatedExercise.weight ?? currentExercise.weight,
+                notes: updatedExercise.notes ?? currentExercise.notes,
+              },
+            })
+          ).unwrap();
+          setEditData((prev) => {
+            const newData = { ...prev };
+            delete newData[key];
+            return newData;
+          });
+        }
+      } catch (error) {
+        console.error("Error saving progress:", error);
+      } finally {
+        setSavingProgress((prev) => ({ ...prev, [key]: false }));
       }
     }
   };
 
-  const handleVideoAction = (
+  const handleVideoAction = async (
     action: "next" | "prev" | "toggle",
     routineIndex: number,
     dayIndex: number,
@@ -176,31 +191,47 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
           [exerciseIndex]: prev[exerciseIndex] !== undefined ? !prev[exerciseIndex] : false,
         }));
       } else if (exercise.videos && exercise.videos.length > 1) {
-        const currentIndex = exercise.videos.findIndex((v) => v.isCurrent);
-        const newIndex =
-          action === "next"
-            ? (currentIndex + 1) % exercise.videos.length
-            : (currentIndex - 1 + exercise.videos.length) % exercise.videos.length;
-        const updatedVideos = exercise.videos.map((v, idx) => ({
-          ...v,
-          isCurrent: idx === newIndex,
-        }));
-        dispatch(
-          setExerciseVideos({
-            routineId: routines[routineIndex]._id,
-            dayIndex,
-            exerciseIndex,
-            videos: updatedVideos,
-          })
-        );
+        setSwitchingVideos((prev) => ({ ...prev, [exerciseIndex]: true }));
+        try {
+          const currentIndex = exercise.videos.findIndex((v) => v.isCurrent);
+          const newIndex =
+            action === "next"
+              ? (currentIndex + 1) % exercise.videos.length
+              : (currentIndex - 1 + exercise.videos.length) % exercise.videos.length;
+          const updatedVideos = exercise.videos.map((v, idx) => ({
+            ...v,
+            isCurrent: idx === newIndex,
+          }));
+          await dispatch(
+            setExerciseVideos({
+              routineId: routines[routineIndex]._id,
+              dayIndex,
+              exerciseIndex,
+              videos: updatedVideos,
+            })
+          ).unwrap();
+        } catch (error) {
+          console.error("Error switching video:", error);
+        } finally {
+          setSwitchingVideos((prev) => ({ ...prev, [exerciseIndex]: false }));
+        }
       }
     }
   };
 
-  const handleToggleCompleted = (routineId: Types.ObjectId, dayIndex: number, exerciseIndex: number) => {
+  const handleToggleCompleted = async (routineId: Types.ObjectId, dayIndex: number, exerciseIndex: number) => {
     if (selectedRoutineIndex !== null) {
-      const currentCompleted = routines[selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex].completed;
-      dispatch(updateExerciseCompleted({ routineId, dayIndex, exerciseIndex, completed: !currentCompleted }));
+      setTogglingCompleted((prev) => ({ ...prev, [exerciseIndex]: true }));
+      try {
+        const currentCompleted = routines[selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex].completed;
+        await dispatch(
+          updateExerciseCompleted({ routineId, dayIndex, exerciseIndex, completed: !currentCompleted })
+        ).unwrap();
+      } catch (error) {
+        console.error("Error toggling completed:", error);
+      } finally {
+        setTogglingCompleted((prev) => ({ ...prev, [exerciseIndex]: false }));
+      }
     }
   };
 
@@ -216,7 +247,6 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
     return total > 0 ? (completed / total) * 100 : 0;
   };
 
-  // Función para agrupar ejercicios por circuito
   const groupExercisesByCircuit = (exercises: IExercise[]) => {
     const circuits: { [key: string]: IExercise[] } = {};
     const standalone: IExercise[] = [];
@@ -334,12 +364,15 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
             <h3 className="text-sm font-semibold text-[#34C759] mb-2">Circuito: {circuitId}</h3>
             <ul className="space-y-2">
               {exercises.map((exercise) => {
-                const globalIndex = selectedDay.exercises.findIndex(ex => ex._id === exercise._id); // Índice global en el array completo
+                const globalIndex = selectedDay.exercises.findIndex((ex) => ex._id === exercise._id);
                 const key = `${selectedDayIndex}-${globalIndex}`;
                 const edited = editData[key] || {};
                 const currentExercise = { ...exercise, ...edited };
                 const isExpanded = expandedExercises[globalIndex] || false;
-                const isLoading = loadingVideos[globalIndex] || false;
+                const isLoadingVideos = loadingVideos[globalIndex] || false;
+                const isSaving = savingProgress[key] || false;
+                const isToggling = togglingCompleted[globalIndex] || false;
+                const isSwitching = switchingVideos[globalIndex] || false;
                 const areVideosVisible = videosVisible[globalIndex] ?? true;
 
                 return (
@@ -349,13 +382,17 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                       className="w-full flex justify-between items-center p-2 text-left hover:bg-[#4A4A4A] transition-colors"
                     >
                       <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={currentExercise.completed || false}
-                          onChange={() => handleToggleCompleted(selectedRoutine._id, selectedDayIndex, globalIndex)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="mr-2 accent-[#34C759]"
-                        />
+                        {isToggling ? (
+                          <Loader />
+                        ) : (
+                          <input
+                            type="checkbox"
+                            checked={currentExercise.completed || false}
+                            onChange={() => handleToggleCompleted(selectedRoutine._id, selectedDayIndex, globalIndex)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="mr-2 accent-[#34C759]"
+                          />
+                        )}
                         <span className="text-sm font-semibold text-white truncate">{exercise.name}</span>
                       </div>
                       <span className="text-[#B0B0B0] text-xs">{isExpanded ? "▲" : "▼"}</span>
@@ -403,8 +440,9 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                                       handleVideoAction("prev", selectedRoutineIndex, selectedDayIndex, globalIndex)
                                     }
                                     className="w-auto bg-transparent text-white hover:bg-transparent rounded-full py-1 px-2 text-xs font-semibold border border-[#2DBF4E]"
+                                    disabled={isSwitching}
                                   >
-                                    {"<< Anterior"}
+                                    {isSwitching ? <SmallLoader /> : "<< Anterior"}
                                   </Button>
                                 )}
                                 <Button
@@ -421,14 +459,15 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                                       handleVideoAction("next", selectedRoutineIndex, selectedDayIndex, globalIndex)
                                     }
                                     className="w-auto bg-transparent text-white hover:bg-transparent rounded-full py-1 px-2 text-xs font-semibold border border-[#2DBF4E]"
+                                    disabled={isSwitching}
                                   >
-                                    {"Siguiente >>"}
+                                    {isSwitching ? <SmallLoader /> : "Siguiente >>"}
                                   </Button>
                                 )}
                               </div>
                             )}
                           </div>
-                        ) : isLoading ? (
+                        ) : isLoadingVideos ? (
                           <div className="text-center">
                             <SmallLoader />
                             <p className="text-[#B0B0B0] italic">Cargando video...</p>
@@ -503,8 +542,8 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                             />
                           </div>
                         </div>
-                        <Button onClick={() => handleSave(selectedDayIndex, globalIndex)} className="w-full">
-                          Guardar
+                        <Button onClick={() => handleSave(selectedDayIndex, globalIndex)} className="w-full" disabled={isSaving}>
+                          {isSaving ? <Loader /> : "Guardar"}
                         </Button>
                       </div>
                     )}
@@ -521,12 +560,15 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
             <h3 className="text-sm font-semibold text-white mb-2">Ejercicios Individuales</h3>
             <ul className="space-y-2">
               {standalone.map((exercise) => {
-                const globalIndex = selectedDay.exercises.findIndex(ex => ex._id === exercise._id); // Índice global en el array completo
+                const globalIndex = selectedDay.exercises.findIndex((ex) => ex._id === exercise._id);
                 const key = `${selectedDayIndex}-${globalIndex}`;
                 const edited = editData[key] || {};
                 const currentExercise = { ...exercise, ...edited };
                 const isExpanded = expandedExercises[globalIndex] || false;
-                const isLoading = loadingVideos[globalIndex] || false;
+                const isLoadingVideos = loadingVideos[globalIndex] || false;
+                const isSaving = savingProgress[key] || false;
+                const isToggling = togglingCompleted[globalIndex] || false;
+                const isSwitching = switchingVideos[globalIndex] || false;
                 const areVideosVisible = videosVisible[globalIndex] ?? true;
 
                 return (
@@ -536,13 +578,17 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                       className="w-full flex justify-between items-center p-2 text-left hover:bg-[#4A4A4A] transition-colors"
                     >
                       <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={currentExercise.completed || false}
-                          onChange={() => handleToggleCompleted(selectedRoutine._id, selectedDayIndex, globalIndex)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="mr-2 accent-[#34C759]"
-                        />
+                        {isToggling ? (
+                          <Loader />
+                        ) : (
+                          <input
+                            type="checkbox"
+                            checked={currentExercise.completed || false}
+                            onChange={() => handleToggleCompleted(selectedRoutine._id, selectedDayIndex, globalIndex)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="mr-2 accent-[#34C759]"
+                          />
+                        )}
                         <span className="text-sm font-semibold text-white truncate">{exercise.name}</span>
                       </div>
                       <span className="text-[#B0B0B0] text-xs">{isExpanded ? "▲" : "▼"}</span>
@@ -590,8 +636,9 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                                       handleVideoAction("prev", selectedRoutineIndex, selectedDayIndex, globalIndex)
                                     }
                                     className="w-auto bg-transparent text-white hover:bg-transparent rounded-full py-1 px-2 text-xs font-semibold border border-[#2DBF4E]"
+                                    disabled={isSwitching}
                                   >
-                                    {"<< Anterior"}
+                                    {isSwitching ? <SmallLoader /> : "<< Anterior"}
                                   </Button>
                                 )}
                                 <Button
@@ -608,14 +655,15 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                                       handleVideoAction("next", selectedRoutineIndex, selectedDayIndex, globalIndex)
                                     }
                                     className="w-auto bg-transparent text-white hover:bg-transparent rounded-full py-1 px-2 text-xs font-semibold border border-[#2DBF4E]"
+                                    disabled={isSwitching}
                                   >
-                                    {"Siguiente >>"}
+                                    {isSwitching ? <SmallLoader /> : "Siguiente >>"}
                                   </Button>
                                 )}
                               </div>
                             )}
                           </div>
-                        ) : isLoading ? (
+                        ) : isLoadingVideos ? (
                           <div className="text-center">
                             <SmallLoader />
                             <p className="text-[#B0B0B0] italic">Cargando video...</p>
@@ -690,8 +738,8 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                             />
                           </div>
                         </div>
-                        <Button onClick={() => handleSave(selectedDayIndex, globalIndex)} className="w-full">
-                          Guardar
+                        <Button onClick={() => handleSave(selectedDayIndex, globalIndex)} className="w-full" disabled={isSaving}>
+                          {isSaving ? <Loader /> : "Guardar"}
                         </Button>
                       </div>
                     )}
@@ -723,22 +771,22 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "my-super-secret-key") as { userId: string };
 
     const routines = await RoutineModel.find({ userId: decoded.userId })
-    .populate({
-      path: "days",
-      model: DayModel,
-      populate: {
-        path: "exercises",
-        model: ExerciseModel,
+      .populate({
+        path: "days",
+        model: DayModel,
         populate: {
-          path: "videos",
-          model: VideoModel,
+          path: "exercises",
+          model: ExerciseModel,
+          populate: {
+            path: "videos",
+            model: VideoModel,
+          },
         },
-      },
-    })
-    .lean();
+      })
+      .lean();
 
     const serializedRoutines = routines.map((r) => ({
-      _id: r._id.toString(), // Convertimos a string para JSON
+      _id: r._id.toString(),
       userId: r.userId.toString(),
       name: r.name,
       days: r.days.map((day: Partial<IDay>) => ({
@@ -771,7 +819,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
       updatedAt: r.updatedAt ? new Date(r.updatedAt).toISOString() : new Date().toISOString(),
     }));
-    console.log(serializedRoutines)
+    console.log(serializedRoutines);
     return { props: { initialRoutines: serializedRoutines } };
   } catch (error) {
     console.error("Error en getServerSideProps:", error);
