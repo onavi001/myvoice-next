@@ -6,6 +6,7 @@ import { createRoutine } from "../../store/routineSlice";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import Card from "../../components/Card";
+import Loader, { SmallLoader } from "../../components/Loader"; // Asegúrate de importar SmallLoader
 import { IExercise } from "../../models/Exercise";
 import { IDay } from "../../models/Day";
 import { IRoutine } from "../../models/Routine";
@@ -44,20 +45,26 @@ export default function RoutineFormPage() {
           videos: [],
           completed: false,
           rest: "",
-          circuitId: "", // Añadimos circuitId por defecto
+          circuitId: "",
         } as unknown as ExerciseFormData,
       ],
       isOpen: true,
     } as unknown as DayFormData,
   ]);
-  const [loading, setLoading] = useState(false);
+  const [creatingRoutine, setCreatingRoutine] = useState(false); // Loader para crear rutina
+  const [addingDay, setAddingDay] = useState(false); // Loader para agregar día
+  const [addingExercise, setAddingExercise] = useState<Record<number, boolean>>({}); // Loader para agregar ejercicio por día
+  const [deletingExercise, setDeletingExercise] = useState<Record<string, boolean>>({}); // Loader para eliminar ejercicio
   const [error, setError] = useState<string | null>(null);
-  const [focusedExerciseId, setFocusedExerciseId] = useState<string | null>(null); // Para manejar el foco
-  const inputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({}); // Refs para inputs de nuevos circuitId
-  const selectRefs = useRef<{ [key: string]: HTMLSelectElement | null }>({}); // Refs para selects
-  const [newCircuitId, setNewCircuitId] = useState<{ [key: string]: string | undefined }>({}); // Nuevos circuitId por ejercicio
+  const [focusedExerciseId, setFocusedExerciseId] = useState<string | null>(null);
+  const inputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  const selectRefs = useRef<{ [key: string]: HTMLSelectElement | null }>({});
+  const [newCircuitId, setNewCircuitId] = useState<{ [key: string]: string | undefined }>({});
 
-  const handleAddDay = () => {
+  const handleAddDay = async () => {
+    setAddingDay(true);
+    // Simulamos un pequeño retraso para que el loader sea visible
+    await new Promise((resolve) => setTimeout(resolve, 300));
     setDays([
       ...days,
       {
@@ -84,9 +91,12 @@ export default function RoutineFormPage() {
         isOpen: true,
       } as unknown as DayFormData,
     ]);
+    setAddingDay(false);
   };
 
-  const handleAddExercise = (dayIndex: number) => {
+  const handleAddExercise = async (dayIndex: number) => {
+    setAddingExercise((prev) => ({ ...prev, [dayIndex]: true }));
+    await new Promise((resolve) => setTimeout(resolve, 300)); // Retraso artificial
     const updatedDays: DayFormData[] = [...days];
     updatedDays[dayIndex].exercises = updatedDays[dayIndex].exercises || [];
     updatedDays[dayIndex].exercises.push({
@@ -104,18 +114,22 @@ export default function RoutineFormPage() {
       circuitId: "",
     } as unknown as ExerciseFormData);
     setDays(updatedDays);
+    setAddingExercise((prev) => ({ ...prev, [dayIndex]: false }));
   };
 
-  const handleDeleteExercise = (dayIndex: number, exerciseId: Types.ObjectId) => {
+  const handleDeleteExercise = async (dayIndex: number, exerciseId: Types.ObjectId) => {
+    setDeletingExercise((prev) => ({ ...prev, [exerciseId.toString()]: true }));
+    await new Promise((resolve) => setTimeout(resolve, 300)); // Retraso artificial
     const updatedDays: DayFormData[] = [...days];
     updatedDays[dayIndex].exercises = updatedDays[dayIndex].exercises.filter(
       (exercise) => exerciseId !== exercise._id
     );
     setDays(updatedDays);
+    setDeletingExercise((prev) => ({ ...prev, [exerciseId.toString()]: false }));
   };
 
   const handleDayChange = (dayId: Types.ObjectId, field: string, value: string) => {
-    setFocusedExerciseId(null)
+    setFocusedExerciseId(null);
     const updatedDays = [...days];
     const dayIndex = updatedDays.findIndex((d) => d._id === dayId);
     if (dayIndex !== -1) {
@@ -148,12 +162,12 @@ export default function RoutineFormPage() {
           [field]: typeof value === "number" ? value : value,
         };
       }
-      setDays(updatedDays);  
+      setDays(updatedDays);
       if (field === "circuitId" && value !== "new") {
         setFocusedExerciseId(exerciseId.toString());
-      }else{
-        setFocusedExerciseId("")
-      } 
+      } else {
+        setFocusedExerciseId("");
+      }
     }
   };
 
@@ -175,9 +189,9 @@ export default function RoutineFormPage() {
   useEffect(() => {
     if (focusedExerciseId) {
       if (newCircuitId[focusedExerciseId]) {
-        inputRefs.current[focusedExerciseId]?.focus(); // Foco en el input si está creando uno nuevo
+        inputRefs.current[focusedExerciseId]?.focus();
       } else {
-        selectRefs.current[focusedExerciseId]?.focus(); // Foco en el select si está seleccionando
+        selectRefs.current[focusedExerciseId]?.focus();
       }
     }
   }, [days, focusedExerciseId, newCircuitId]);
@@ -192,16 +206,16 @@ export default function RoutineFormPage() {
       return;
     }
 
-    setLoading(true);
+    setCreatingRoutine(true);
     setError(null);
-    const cleanedDays = days.map((day:Partial<IDay>) => {
+    const cleanedDays = days.map((day: Partial<IDay>) => {
       const { ...dayRest } = day;
       if (dayRest._id && String(dayRest._id).startsWith("temp")) {
         delete dayRest._id;
       }
       return {
         ...dayRest,
-        exercises: (day.exercises ?? []).map((exercise:Partial<IExercise>) => {
+        exercises: (day.exercises ?? []).map((exercise: Partial<IExercise>) => {
           const { ...exerciseRest } = exercise;
           if (exerciseRest._id && String(exerciseRest._id).startsWith("temp")) {
             delete exerciseRest._id;
@@ -217,11 +231,10 @@ export default function RoutineFormPage() {
       setError("Error al crear la rutina");
       console.error(err);
     } finally {
-      setLoading(false);
+      setCreatingRoutine(false);
     }
   };
 
-  // Obtener circuitIds únicos para un día
   const getExistingCircuitIds = (dayIndex: number) => {
     const circuitIds = new Set<string>();
     days[dayIndex].exercises.forEach((exercise) => {
@@ -232,7 +245,6 @@ export default function RoutineFormPage() {
     return Array.from(circuitIds);
   };
 
-  // Agrupar ejercicios por circuitId
   const groupExercisesByCircuit = (exercises: ExerciseFormData[]) => {
     const circuits: { [key: string]: ExerciseFormData[] } = {};
     const standalone: ExerciseFormData[] = [];
@@ -248,7 +260,7 @@ export default function RoutineFormPage() {
 
     return { circuits, standalone };
   };
-  console.log(days)
+
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
       <div className="p-4 max-w-md mx-auto flex-1">
@@ -269,6 +281,7 @@ export default function RoutineFormPage() {
           {days.map((day, dayIndex) => {
             const { circuits, standalone } = groupExercisesByCircuit(day.exercises);
             const existingCircuitIds = getExistingCircuitIds(dayIndex);
+            const isAddingExercise = addingExercise[dayIndex] || false;
 
             return (
               <Card
@@ -322,155 +335,162 @@ export default function RoutineFormPage() {
                     {Object.entries(circuits).map(([circuitId, exercises], circuitIndex) => (
                       <Card key={`circuit-${circuitIndex}`} className="p-2 bg-[#2D2D2D] rounded-md mb-2">
                         <h3 className="text-sm font-semibold text-[#34C759] mb-2">Circuito: {circuitId}</h3>
-                        {exercises.map((exercise, exerciseIndex) => (
-                          <Card
-                            key={exercise._id?.toString()}
-                            className="p-2 bg-[#252525] border-2 border-[#4A4A4A] rounded-md mb-2"
-                          >
-                            <div
-                              className="flex justify-between items-center cursor-pointer py-1 bg-[#2D2D2D] px-2 rounded-t-md"
-                              onClick={() => toggleExercises(dayIndex, exercise._id)}
+                        {exercises.map((exercise, exerciseIndex) => {
+                          const isDeleting = deletingExercise[exercise._id.toString()] || false;
+                          return (
+                            <Card
+                              key={exercise._id?.toString()}
+                              className="p-2 bg-[#252525] border-2 border-[#4A4A4A] rounded-md mb-2"
                             >
-                              <h2 className="text-sm font-bold text-[#34C759]">
-                                {exercise.name || `Ejercicio ${exerciseIndex + 1}`}
-                              </h2>
-                              <span className="text-[#D1D1D1] text-xs">{exercise.isOpen ? "▲" : "▼"}</span>
-                            </div>
-                            {exercise.isOpen && (
-                              <>
-                                <Input
-                                  name="name"
-                                  value={exercise.name}
-                                  onChange={(e) =>
-                                    handleExerciseChange(dayIndex, exercise._id, "name", e.target.value)
-                                  }
-                                  placeholder="Press de banca"
-                                  className="mt-2 bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                                />
-                                <div className="mt-2">
-                                  <label className="block text-[#D1D1D1] text-xs font-medium mb-1">
-                                    ID del circuito
-                                  </label>
-                                  <select
-                                    name="circuitId"
-                                    value={exercise.circuitId || ""}
-                                    onChange={(e) => {
-                                      const value = e.target.value;
-                                      if (value === "new") {
-                                        setNewCircuitId((prev) => ({
-                                          ...prev,
-                                          [exercise._id.toString()]: "",
-                                        }));
-                                      } else {
-                                        handleExerciseChange(dayIndex, exercise._id, "circuitId", value);
-                                        setNewCircuitId((prev) => ({
-                                          ...prev,
-                                          [exercise._id.toString()]: undefined,
-                                        }));
-                                      }
-                                    }}
-                                    ref={(el) => { selectRefs.current[exercise._id.toString()] = el; }}
-                                    className="bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                                  >
-                                    <option value="">Sin circuito</option>
-                                    {existingCircuitIds.map((id) => (
-                                      <option key={id} value={id}>
-                                        {id}
-                                      </option>
-                                    ))}
-                                    <option value="new">Agregar nuevo circuito</option>
-                                  </select>
-                                  {newCircuitId[exercise._id.toString()] !== undefined && (
-                                    <Input
-                                      name="newCircuitId"
-                                      value={newCircuitId[exercise._id.toString()] || ""}
+                              <div
+                                className="flex justify-between items-center cursor-pointer py-1 bg-[#2D2D2D] px-2 rounded-t-md"
+                                onClick={() => toggleExercises(dayIndex, exercise._id)}
+                              >
+                                <h2 className="text-sm font-bold text-[#34C759]">
+                                  {exercise.name || `Ejercicio ${exerciseIndex + 1}`}
+                                </h2>
+                                <span className="text-[#D1D1D1] text-xs">{exercise.isOpen ? "▲" : "▼"}</span>
+                              </div>
+                              {exercise.isOpen && (
+                                <>
+                                  <Input
+                                    name="name"
+                                    value={exercise.name}
+                                    onChange={(e) =>
+                                      handleExerciseChange(dayIndex, exercise._id, "name", e.target.value)
+                                    }
+                                    placeholder="Press de banca"
+                                    className="mt-2 bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                                  />
+                                  <div className="mt-2">
+                                    <label className="block text-[#D1D1D1] text-xs font-medium mb-1">
+                                      ID del circuito
+                                    </label>
+                                    <select
+                                      name="circuitId"
+                                      value={exercise.circuitId || ""}
                                       onChange={(e) => {
                                         const value = e.target.value;
-                                        setNewCircuitId((prev) => ({
-                                          ...prev,
-                                          [exercise._id.toString()]: value,
-                                        }));
-                                        handleExerciseChange(dayIndex, exercise._id, "circuitId", value);
+                                        if (value === "new") {
+                                          setNewCircuitId((prev) => ({
+                                            ...prev,
+                                            [exercise._id.toString()]: "",
+                                          }));
+                                        } else {
+                                          handleExerciseChange(dayIndex, exercise._id, "circuitId", value);
+                                          setNewCircuitId((prev) => ({
+                                            ...prev,
+                                            [exercise._id.toString()]: undefined,
+                                          }));
+                                        }
                                       }}
-                                      placeholder="Escribe un nuevo circuitId (ej. circuit-1)"
-                                      className="mt-2 bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                                      ref={(el) => { inputRefs.current[exercise._id.toString()] = el; }}
-                                    />
-                                  )}
-                                </div>
-                                <Input
-                                  name="muscleGroup"
-                                  value={exercise.muscleGroup.join(", ")}
-                                  onChange={(e) =>
-                                    handleExerciseChange(dayIndex, exercise._id, "muscleGroup", e.target.value)
-                                  }
-                                  placeholder="Musculos trabajados (separados por comas)"
-                                  className="mt-2 bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                                />
-                                <Input
-                                  name="tips"
-                                  value={exercise.tips.join(", ")}
-                                  onChange={(e) =>
-                                    handleExerciseChange(dayIndex, exercise._id, "tips", e.target.value)
-                                  }
-                                  placeholder="Consejos (separados por comas)"
-                                  className="mt-2 bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                                />
-                                <div className="mt-4 flex items-end space-x-2">
-                                  <div className="w-1/3">
-                                    <label className="block text-[#D1D1D1] text-xs font-semibold">Series</label>
-                                    <Input
-                                      name="sets"
-                                      type="number"
-                                      value={exercise.sets}
-                                      onChange={(e) =>
-                                        handleExerciseChange(dayIndex, exercise._id, "sets", Number(e.target.value))
-                                      }
-                                      placeholder="Series"
-                                      className="bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                                    />
+                                      ref={(el) => {
+                                        selectRefs.current[exercise._id.toString()] = el;
+                                      }}
+                                      className="bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                                    >
+                                      <option value="">Sin circuito</option>
+                                      {existingCircuitIds.map((id) => (
+                                        <option key={id} value={id}>
+                                          {id}
+                                        </option>
+                                      ))}
+                                      <option value="new">Agregar nuevo circuito</option>
+                                    </select>
+                                    {newCircuitId[exercise._id.toString()] !== undefined && (
+                                      <Input
+                                        name="newCircuitId"
+                                        value={newCircuitId[exercise._id.toString()] || ""}
+                                        onChange={(e) => {
+                                          const value = e.target.value;
+                                          setNewCircuitId((prev) => ({
+                                            ...prev,
+                                            [exercise._id.toString()]: value,
+                                          }));
+                                          handleExerciseChange(dayIndex, exercise._id, "circuitId", value);
+                                        }}
+                                        placeholder="Escribe un nuevo circuitId (ej. circuit-1)"
+                                        className="mt-2 bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                                        ref={(el) => {
+                                          inputRefs.current[exercise._id.toString()] = el;
+                                        }}
+                                      />
+                                    )}
                                   </div>
-                                  <div className="w-1/3">
-                                    <label className="block text-[#D1D1D1] text-xs font-semibold">
-                                      Repeticiones/segundos
-                                    </label>
-                                    <Input
-                                      name="reps"
-                                      type="number"
-                                      value={exercise.reps}
-                                      onChange={(e) =>
-                                        handleExerciseChange(dayIndex, exercise._id, "reps", Number(e.target.value))
-                                      }
-                                      placeholder="Reps"
-                                      className="bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                                    />
+                                  <Input
+                                    name="muscleGroup"
+                                    value={exercise.muscleGroup.join(", ")}
+                                    onChange={(e) =>
+                                      handleExerciseChange(dayIndex, exercise._id, "muscleGroup", e.target.value)
+                                    }
+                                    placeholder="Musculos trabajados (separados por comas)"
+                                    className="mt-2 bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                                  />
+                                  <Input
+                                    name="tips"
+                                    value={exercise.tips.join(", ")}
+                                    onChange={(e) =>
+                                      handleExerciseChange(dayIndex, exercise._id, "tips", e.target.value)
+                                    }
+                                    placeholder="Consejos (separados por comas)"
+                                    className="mt-2 bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                                  />
+                                  <div className="mt-4 flex items-end space-x-2">
+                                    <div className="w-1/3">
+                                      <label className="block text-[#D1D1D1] text-xs font-semibold">Series</label>
+                                      <Input
+                                        name="sets"
+                                        type="number"
+                                        value={exercise.sets}
+                                        onChange={(e) =>
+                                          handleExerciseChange(dayIndex, exercise._id, "sets", Number(e.target.value))
+                                        }
+                                        placeholder="Series"
+                                        className="bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                                      />
+                                    </div>
+                                    <div className="w-1/3">
+                                      <label className="block text-[#D1D1D1] text-xs font-semibold">
+                                        Repeticiones/segundos
+                                      </label>
+                                      <Input
+                                        name="reps"
+                                        type="number"
+                                        value={exercise.reps}
+                                        onChange={(e) =>
+                                          handleExerciseChange(dayIndex, exercise._id, "reps", Number(e.target.value))
+                                        }
+                                        placeholder="Reps"
+                                        className="bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                                      />
+                                    </div>
+                                    <div className="w-1/3">
+                                      <label className="block text-[#D1D1D1] text-xs font-semibold">Descanso(s)</label>
+                                      <Input
+                                        name="rest"
+                                        type="number"
+                                        value={exercise.rest}
+                                        onChange={(e) =>
+                                          handleExerciseChange(dayIndex, exercise._id, "rest", Number(e.target.value))
+                                        }
+                                        placeholder="Descanso"
+                                        className="bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                                      />
+                                    </div>
                                   </div>
-                                  <div className="w-1/3">
-                                    <label className="block text-[#D1D1D1] text-xs font-semibold">Descanso(s)</label>
-                                    <Input
-                                      name="rest"
-                                      type="number"
-                                      value={exercise.rest}
-                                      onChange={(e) =>
-                                        handleExerciseChange(dayIndex, exercise._id, "rest", Number(e.target.value))
-                                      }
-                                      placeholder="Descanso"
-                                      className="bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                                    />
-                                  </div>
-                                </div>
-                                <Button
-                                  type="button"
-                                  disabled={day.exercises.length <= 1}
-                                  onClick={() => handleDeleteExercise(dayIndex, exercise._id)}
-                                  className="mt-4 w-1/2 bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md disabled:bg-[#D32F2F] disabled:opacity-50"
-                                >
-                                  Eliminar ejercicio
-                                </Button>
-                              </>
-                            )}
-                          </Card>
-                        ))}
+                                  <Button
+                                    type="button"
+                                    disabled={day.exercises.length <= 1 || isDeleting}
+                                    onClick={() => handleDeleteExercise(dayIndex, exercise._id)}
+                                    className="mt-4 w-1/2 bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md disabled:bg-[#D32F2F] disabled:opacity-50"
+                                  >
+                                    {isDeleting ? <SmallLoader /> : "Eliminar ejercicio"}
+                                  </Button>
+                                </>
+                              )}
+                            </Card>
+                          );
+                        })}
                       </Card>
                     ))}
 
@@ -478,155 +498,162 @@ export default function RoutineFormPage() {
                     {standalone.length > 0 && (
                       <Card className="p-2 bg-[#2D2D2D] rounded-md mb-2">
                         <h3 className="text-sm font-semibold text-white mb-2">Ejercicios Individuales</h3>
-                        {standalone.map((exercise, exerciseIndex) => (
-                          <Card
-                            key={exercise._id?.toString()}
-                            className="p-2 bg-[#252525] border-2 border-[#4A4A4A] rounded-md mb-2"
-                          >
-                            <div
-                              className="flex justify-between items-center cursor-pointer py-1 bg-[#2D2D2D] px-2 rounded-t-md"
-                              onClick={() => toggleExercises(dayIndex, exercise._id)}
+                        {standalone.map((exercise, exerciseIndex) => {
+                          const isDeleting = deletingExercise[exercise._id.toString()] || false;
+                          return (
+                            <Card
+                              key={exercise._id?.toString()}
+                              className="p-2 bg-[#252525] border-2 border-[#4A4A4A] rounded-md mb-2"
                             >
-                              <h2 className="text-sm font-bold text-[#34C759]">
-                                {exercise.name || `Ejercicio ${exerciseIndex + 1}`}
-                              </h2>
-                              <span className="text-[#D1D1D1] text-xs">{exercise.isOpen ? "▲" : "▼"}</span>
-                            </div>
-                            {exercise.isOpen && (
-                              <>
-                                <Input
-                                  name="name"
-                                  value={exercise.name}
-                                  onChange={(e) =>
-                                    handleExerciseChange(dayIndex, exercise._id, "name", e.target.value)
-                                  }
-                                  placeholder="Press de banca"
-                                  className="mt-2 bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                                />
-                                <div className="mt-2">
-                                  <label className="block text-[#D1D1D1] text-xs font-medium mb-1">
-                                    ID del circuito
-                                  </label>
-                                  <select
-                                    name="circuitId"
-                                    value={exercise.circuitId || ""}
-                                    onChange={(e) => {
-                                      const value = e.target.value;
-                                      if (value === "new") {
-                                        setNewCircuitId((prev) => ({
-                                          ...prev,
-                                          [exercise._id.toString()]: "",
-                                        }));
-                                      } else {
-                                        handleExerciseChange(dayIndex, exercise._id, "circuitId", value);
-                                        setNewCircuitId((prev) => ({
-                                          ...prev,
-                                          [exercise._id.toString()]: undefined,
-                                        }));
-                                      }
-                                    }}
-                                    ref={(el) => { selectRefs.current[exercise._id.toString()] = el; }}
-                                    className="bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                                  >
-                                    <option value="">Sin circuito</option>
-                                    {existingCircuitIds.map((id) => (
-                                      <option key={id} value={id}>
-                                        {id}
-                                      </option>
-                                    ))}
-                                    <option value="new">Agregar nuevo circuito</option>
-                                  </select>
-                                  {newCircuitId[exercise._id.toString()] !== undefined && (
-                                    <Input
-                                      name="newCircuitId"
-                                      value={newCircuitId[exercise._id.toString()] || ""}
+                              <div
+                                className="flex justify-between items-center cursor-pointer py-1 bg-[#2D2D2D] px-2 rounded-t-md"
+                                onClick={() => toggleExercises(dayIndex, exercise._id)}
+                              >
+                                <h2 className="text-sm font-bold text-[#34C759]">
+                                  {exercise.name || `Ejercicio ${exerciseIndex + 1}`}
+                                </h2>
+                                <span className="text-[#D1D1D1] text-xs">{exercise.isOpen ? "▲" : "▼"}</span>
+                              </div>
+                              {exercise.isOpen && (
+                                <>
+                                  <Input
+                                    name="name"
+                                    value={exercise.name}
+                                    onChange={(e) =>
+                                      handleExerciseChange(dayIndex, exercise._id, "name", e.target.value)
+                                    }
+                                    placeholder="Press de banca"
+                                    className="mt-2 bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                                  />
+                                  <div className="mt-2">
+                                    <label className="block text-[#D1D1D1] text-xs font-medium mb-1">
+                                      ID del circuito
+                                    </label>
+                                    <select
+                                      name="circuitId"
+                                      value={exercise.circuitId || ""}
                                       onChange={(e) => {
                                         const value = e.target.value;
-                                        setNewCircuitId((prev) => ({
-                                          ...prev,
-                                          [exercise._id.toString()]: value,
-                                        }));
-                                        handleExerciseChange(dayIndex, exercise._id, "circuitId", value);
+                                        if (value === "new") {
+                                          setNewCircuitId((prev) => ({
+                                            ...prev,
+                                            [exercise._id.toString()]: "",
+                                          }));
+                                        } else {
+                                          handleExerciseChange(dayIndex, exercise._id, "circuitId", value);
+                                          setNewCircuitId((prev) => ({
+                                            ...prev,
+                                            [exercise._id.toString()]: undefined,
+                                          }));
+                                        }
                                       }}
-                                      placeholder="Escribe un nuevo circuitId (ej. circuit-1)"
-                                      className="mt-2 bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                                      ref={(el) => { inputRefs.current[exercise._id.toString()] = el; }}
-                                    />
-                                  )}
-                                </div>
-                                <Input
-                                  name="muscleGroup"
-                                  value={exercise.muscleGroup.join(", ")}
-                                  onChange={(e) =>
-                                    handleExerciseChange(dayIndex, exercise._id, "muscleGroup", e.target.value)
-                                  }
-                                  placeholder="Musculos trabajados (separados por comas)"
-                                  className="mt-2 bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                                />
-                                <Input
-                                  name="tips"
-                                  value={exercise.tips.join(", ")}
-                                  onChange={(e) =>
-                                    handleExerciseChange(dayIndex, exercise._id, "tips", e.target.value)
-                                  }
-                                  placeholder="Consejos (separados por comas)"
-                                  className="mt-2 bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                                />
-                                <div className="mt-4 flex items-end space-x-2">
-                                  <div className="w-1/3">
-                                    <label className="block text-[#D1D1D1] text-xs font-semibold">Series</label>
-                                    <Input
-                                      name="sets"
-                                      type="number"
-                                      value={exercise.sets}
-                                      onChange={(e) =>
-                                        handleExerciseChange(dayIndex, exercise._id, "sets", Number(e.target.value))
-                                      }
-                                      placeholder="Series"
-                                      className="bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                                    />
+                                      ref={(el) => {
+                                        selectRefs.current[exercise._id.toString()] = el;
+                                      }}
+                                      className="bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                                    >
+                                      <option value="">Sin circuito</option>
+                                      {existingCircuitIds.map((id) => (
+                                        <option key={id} value={id}>
+                                          {id}
+                                        </option>
+                                      ))}
+                                      <option value="new">Agregar nuevo circuito</option>
+                                    </select>
+                                    {newCircuitId[exercise._id.toString()] !== undefined && (
+                                      <Input
+                                        name="newCircuitId"
+                                        value={newCircuitId[exercise._id.toString()] || ""}
+                                        onChange={(e) => {
+                                          const value = e.target.value;
+                                          setNewCircuitId((prev) => ({
+                                            ...prev,
+                                            [exercise._id.toString()]: value,
+                                          }));
+                                          handleExerciseChange(dayIndex, exercise._id, "circuitId", value);
+                                        }}
+                                        placeholder="Escribe un nuevo circuitId (ej. circuit-1)"
+                                        className="mt-2 bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                                        ref={(el) => {
+                                          inputRefs.current[exercise._id.toString()] = el;
+                                        }}
+                                      />
+                                    )}
                                   </div>
-                                  <div className="w-1/3">
-                                    <label className="block text-[#D1D1D1] text-xs font-semibold">
-                                      Repeticiones/segundos
-                                    </label>
-                                    <Input
-                                      name="reps"
-                                      type="number"
-                                      value={exercise.reps}
-                                      onChange={(e) =>
-                                        handleExerciseChange(dayIndex, exercise._id, "reps", Number(e.target.value))
-                                      }
-                                      placeholder="Reps"
-                                      className="bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                                    />
+                                  <Input
+                                    name="muscleGroup"
+                                    value={exercise.muscleGroup.join(", ")}
+                                    onChange={(e) =>
+                                      handleExerciseChange(dayIndex, exercise._id, "muscleGroup", e.target.value)
+                                    }
+                                    placeholder="Musculos trabajados (separados por comas)"
+                                    className="mt-2 bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                                  />
+                                  <Input
+                                    name="tips"
+                                    value={exercise.tips.join(", ")}
+                                    onChange={(e) =>
+                                      handleExerciseChange(dayIndex, exercise._id, "tips", e.target.value)
+                                    }
+                                    placeholder="Consejos (separados por comas)"
+                                    className="mt-2 bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                                  />
+                                  <div className="mt-4 flex items-end space-x-2">
+                                    <div className="w-1/3">
+                                      <label className="block text-[#D1D1D1] text-xs font-semibold">Series</label>
+                                      <Input
+                                        name="sets"
+                                        type="number"
+                                        value={exercise.sets}
+                                        onChange={(e) =>
+                                          handleExerciseChange(dayIndex, exercise._id, "sets", Number(e.target.value))
+                                        }
+                                        placeholder="Series"
+                                        className="bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                                      />
+                                    </div>
+                                    <div className="w-1/3">
+                                      <label className="block text-[#D1D1D1] text-xs font-semibold">
+                                        Repeticiones/segundos
+                                      </label>
+                                      <Input
+                                        name="reps"
+                                        type="number"
+                                        value={exercise.reps}
+                                        onChange={(e) =>
+                                          handleExerciseChange(dayIndex, exercise._id, "reps", Number(e.target.value))
+                                        }
+                                        placeholder="Reps"
+                                        className="bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                                      />
+                                    </div>
+                                    <div className="w-1/3">
+                                      <label className="block text-[#D1D1D1] text-xs font-semibold">Descanso(s)</label>
+                                      <Input
+                                        name="rest"
+                                        type="number"
+                                        value={exercise.rest}
+                                        onChange={(e) =>
+                                          handleExerciseChange(dayIndex, exercise._id, "rest", Number(e.target.value))
+                                        }
+                                        placeholder="Descanso"
+                                        className="bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                                      />
+                                    </div>
                                   </div>
-                                  <div className="w-1/3">
-                                    <label className="block text-[#D1D1D1] text-xs font-semibold">Descanso(s)</label>
-                                    <Input
-                                      name="rest"
-                                      type="number"
-                                      value={exercise.rest}
-                                      onChange={(e) =>
-                                        handleExerciseChange(dayIndex, exercise._id, "rest", Number(e.target.value))
-                                      }
-                                      placeholder="Descanso"
-                                      className="bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs w-full focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                                    />
-                                  </div>
-                                </div>
-                                <Button
-                                  type="button"
-                                  disabled={day.exercises.length <= 1}
-                                  onClick={() => handleDeleteExercise(dayIndex, exercise._id)}
-                                  className="mt-4 w-1/2 bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md disabled:bg-[#D32F2F] disabled:opacity-50"
-                                >
-                                  Eliminar ejercicio
-                                </Button>
-                              </>
-                            )}
-                          </Card>
-                        ))}
+                                  <Button
+                                    type="button"
+                                    disabled={day.exercises.length <= 1 || isDeleting}
+                                    onClick={() => handleDeleteExercise(dayIndex, exercise._id)}
+                                    className="mt-4 w-1/2 bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md disabled:bg-[#D32F2F] disabled:opacity-50"
+                                  >
+                                    {isDeleting ? <SmallLoader /> : "Eliminar ejercicio"}
+                                  </Button>
+                                </>
+                              )}
+                            </Card>
+                          );
+                        })}
                       </Card>
                     )}
 
@@ -634,9 +661,10 @@ export default function RoutineFormPage() {
                       variant="secondary"
                       type="button"
                       onClick={() => handleAddExercise(dayIndex)}
-                      className="mt-2 w-full bg-[#66BB6A] text-black hover:bg-[#4CAF50] rounded-md py-1 px-2 text-xs font-semibold border border-[#4CAF50] shadow-md"
+                      disabled={isAddingExercise}
+                      className="mt-2 w-full bg-[#66BB6A] text-black hover:bg-[#4CAF50] rounded-md py-1 px-2 text-xs font-semibold border border-[#4CAF50] shadow-md disabled:bg-[#4CAF50] disabled:opacity-50"
                     >
-                      + Ejercicio
+                      {isAddingExercise ? <SmallLoader /> : "+ Ejercicio"}
                     </Button>
                   </div>
                 )}
@@ -648,9 +676,10 @@ export default function RoutineFormPage() {
             variant="secondary"
             type="button"
             onClick={handleAddDay}
-            className="w-full bg-[#42A5F5] text-black hover:bg-[#1E88E5] rounded-md py-1 px-2 text-xs font-semibold border border-[#1E88E5] shadow-md"
+            disabled={addingDay}
+            className="w-full bg-[#42A5F5] text-black hover:bg-[#1E88E5] rounded-md py-1 px-2 text-xs font-semibold border border-[#1E88E5] shadow-md disabled:bg-[#1E88E5] disabled:opacity-50"
           >
-            + Día
+            {addingDay ? <SmallLoader /> : "+ Día"}
           </Button>
 
           {error && <p className="text-red-500 text-xs font-medium">{error}</p>}
@@ -658,15 +687,15 @@ export default function RoutineFormPage() {
           <div className="flex space-x-2">
             <Button
               type="submit"
-              disabled={loading}
+              disabled={creatingRoutine}
               className="w-1/2 bg-[#66BB6A] text-black hover:bg-[#4CAF50] rounded-md py-1 px-2 text-xs font-semibold border border-[#4CAF50] shadow-md disabled:bg-[#4CAF50] disabled:opacity-50"
             >
-              {loading ? "Creando..." : "Crear"}
+              {creatingRoutine ? <>Crear <Loader /></> : "Crear"}
             </Button>
             <Button
               type="button"
               onClick={() => router.push("/app/routine")}
-              className="w-1/2 bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md disabled:bg-[#4CAF50] disabled:opacity-50"
+              className="w-1/2 bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md"
             >
               Cancelar
             </Button>

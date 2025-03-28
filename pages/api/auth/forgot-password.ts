@@ -39,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await user.save();
 
     // Enviar correo con el enlace
-    const resetUrl = `${process.env.APP_URL}/reset-password?token=${resetPasswordToken}`;
+    const resetUrl = `${process.env.APP_URL}/auth/reset-password?token=${resetPasswordToken}`;
     const emailContent = `
       <h1>Restablecer tu contraseña</h1>
       <p>Haz clic en el siguiente enlace para restablecer tu contraseña:</p>

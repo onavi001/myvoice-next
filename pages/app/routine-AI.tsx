@@ -9,15 +9,18 @@ import Button from "../../components/Button";
 import Input from "../../components/Input";
 import Card from "../../components/Card";
 import Toast from "../../components/Toast";
+import {FuturisticLoader} from "../../components/Loader"; // Asegúrate de importar SmallLoader
 import { IExercise } from "../../models/Exercise";
 
 export default function RoutineAIPage() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
-  const { routines, loading, error } = useSelector((state: RootState) => state.routine);
+  const { routines, error, loading } = useSelector((state: RootState) => state.routine);
   const [currentRoutine, setCurrentRoutine] = useState<RoutineData | null>(null);
   const [initialFlag, setInitialFlag] = useState<boolean>(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [generatingRoutine, setGeneratingRoutine] = useState(false); // Loader para generar rutina
+  const [savingRoutine, setSavingRoutine] = useState(false); // Loader para guardar rutina
 
   const [formData, setFormData] = useState({
     level: "intermedio" as const,
@@ -42,18 +45,26 @@ export default function RoutineAIPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
+    setGeneratingRoutine(true);
     setInitialFlag(false);
-    dispatch(generateRoutine(formData)).then((result) => {
-      if (result.meta.requestStatus === "rejected") {
+    try {
+      const result = await dispatch(generateRoutine(formData)).unwrap();
+      if (!result) {
         setToastMessage("Error al generar la rutina");
       }
-    });
+    } catch (err) {
+      setToastMessage("Error al generar la rutina");
+      console.error("Error al generar rutina:", err);
+    } finally {
+      setGeneratingRoutine(false);
+    }
   };
 
   const handleSaveRoutine = async () => {
     if (!currentRoutine) return;
-    
+
+    setSavingRoutine(true);
     try {
       const routineResult = await dispatch(
         createRoutine({ name: currentRoutine.name, days: [] } as unknown as IRoutine)
@@ -91,11 +102,16 @@ export default function RoutineAIPage() {
     } catch (err) {
       console.error("Error al guardar rutina:", err);
       setToastMessage("Error al guardar la rutina");
+    } finally {
+      setSavingRoutine(false);
     }
   };
 
   const handleCloseToast = () => setToastMessage(null);
-
+  if (loading) {
+    return <FuturisticLoader />;
+    
+  }
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white p-4">
       <Head>
@@ -103,65 +119,84 @@ export default function RoutineAIPage() {
         <title>Generar Rutina - Tu Aplicación</title>
       </Head>
 
-      {!currentRoutine ? (
+      {!currentRoutine || error ? (
         <>
           <h1 className="text-lg font-bold text-[#34C759] mb-4">Generar Rutina</h1>
           <Card className="max-w-md mx-auto space-y-4 bg-[#252525] border-2 border-[#4A4A4A] p-4 rounded-md">
-            <Input
+            
+            <div className="flex items-center gap-4">
+              <label className="w-16 text-[#D1D1D1] text-xs font-medium">Nombre:</label>
+              <Input
                 name="name"
                 type="text"
                 value={formData.name}
                 onChange={(e) => handleChange("name", e.target.value)}
                 placeholder="Nombre de la rutina"
-                className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
-            />
-            <select
-              value={formData.level}
-              onChange={(e) => handleChange("level", e.target.value)}
-              className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
-            >
-              <option value="principiante">Principiante</option>
-              <option value="intermedio">Intermedio</option>
-              <option value="avanzado">Avanzado</option>
-            </select>
-            <select
-              value={formData.goal}
-              onChange={(e) => handleChange("goal", e.target.value)}
-              className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
-            >
-              <option value="fuerza">Fuerza</option>
-              <option value="hipertrofia">Hipertrofia</option>
-              <option value="resistencia">Resistencia</option>
-            </select>
-            <Input
+                className="flex-1 bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+              />
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="w-16 text-[#D1D1D1] text-xs font-medium">Nivel:</label>
+              <select
+                value={formData.level}
+                onChange={(e) => handleChange("level", e.target.value)}
+                className="flex-1 bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+              >
+                <option value="principiante">Principiante</option>
+                <option value="intermedio">Intermedio</option>
+                <option value="avanzado">Avanzado</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="w-16 text-[#D1D1D1] text-xs font-medium">Objetivo:</label>
+              <select
+                value={formData.goal}
+                onChange={(e) => handleChange("goal", e.target.value)}
+                className="flex-1 bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+              >
+                <option value="fuerza">Fuerza</option>
+                <option value="hipertrofia">Hipertrofia</option>
+                <option value="resistencia">Resistencia</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="w-16 text-[#D1D1D1] text-xs font-medium">Días (1-7):</label>
+              <Input
                 name="days"
-              type="number"
-              value={formData.days}
-              onChange={(e) => handleChange("days", Number(e.target.value))}
-              placeholder="Días"
-              className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
-            />
-            <select
-              value={formData.equipment}
-              onChange={(e) => handleChange("equipment", e.target.value)}
-              className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
-            >
-              <option value="gym">Gimnasio</option>
-              <option value="casa">Casa</option>
-              <option value="pesas">Pesas</option>
-            </select>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => handleChange("notes", e.target.value)}
-              placeholder="Notas"
-              className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs h-20 resize-none"
-            />
+                type="number"
+                value={formData.days}
+                onChange={(e) => handleChange("days", Number(e.target.value))}
+                placeholder="Días"
+                className="flex-1 bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+              />
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="w-16 text-[#D1D1D1] text-xs font-medium">Equipo:</label>
+              <select
+                value={formData.equipment}
+                onChange={(e) => handleChange("equipment", e.target.value)}
+                className="flex-1 bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+              >
+                <option value="gym">Gimnasio</option>
+                <option value="casa">Casa</option>
+                <option value="pesas">Pesas</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[#D1D1D1] text-xs font-medium">Notas:</label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => handleChange("notes", e.target.value)}
+                placeholder="Notas"
+                className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs h-20 resize-none focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+              />
+            </div>
             <Button
               onClick={handleGenerate}
-              disabled={loading}
-              className="w-full bg-[#34C759] text-black p-2 rounded-md disabled:opacity-50 text-xs font-semibold"
+              disabled={generatingRoutine}
+              className="w-full bg-[#34C759] text-black p-2 rounded-md disabled:bg-[#34C759] disabled:opacity-50 text-xs font-semibold hover:bg-[#2ca44e] border border-[#34C759] shadow-md"
             >
-              {loading ? "Generando..." : "Generar Rutina"}
+              {generatingRoutine ? <><FuturisticLoader />Generar Rutina</>: "Generar Rutina"}
             </Button>
           </Card>
         </>
@@ -188,10 +223,10 @@ export default function RoutineAIPage() {
           ))}
           <Button
             onClick={handleSaveRoutine}
-            disabled={loading}
-            className="w-full bg-[#34C759] text-black p-2 rounded-md disabled:opacity-50 mt-4 text-xs font-semibold"
+            disabled={savingRoutine}
+            className="w-full bg-[#34C759] text-black p-2 rounded-md disabled:bg-[#34C759] disabled:opacity-50 mt-4 text-xs font-semibold hover:bg-[#2ca44e] border border-[#34C759] shadow-md"
           >
-            {loading ? "Guardando..." : "Guardar Rutina"}
+            {savingRoutine ? <><FuturisticLoader />Guardar Rutina</> : "Guardar Rutina"}
           </Button>
         </div>
       )}
