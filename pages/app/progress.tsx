@@ -44,7 +44,7 @@ export default function ProgressPage({
   const [editData, setEditData] = useState<Record<string, Partial<ProgressData>>>({});
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
   const [newProgress, setNewProgress] = useState<Omit<ProgressData, "_id" | "userId">>({
-    routineId: "", // Inicializamos como vacío y lo actualizamos en useEffect
+    routineId: "",
     dayIndex: 0,
     exerciseIndex: 0,
     sets: 0,
@@ -55,6 +55,11 @@ export default function ProgressPage({
     notes: "",
     date: new Date(),
   });
+  const [addingProgress, setAddingProgress] = useState(false); // Loader para agregar progreso
+  const [savingProgress, setSavingProgress] = useState<Record<string, boolean>>({}); // Loader para guardar edición
+  const [deletingProgress, setDeletingProgress] = useState<Record<string, boolean>>({}); // Loader para eliminar progreso
+  const [clearingProgress, setClearingProgress] = useState(false); // Loader para limpiar progreso
+  const [fetchingInitialData, setFetchingInitialData] = useState(true); // Loader para datos iniciales
   const itemsPerPage = 10;
 
   // Actualizar routineId cuando routines o initialRoutines estén disponibles
@@ -73,18 +78,24 @@ export default function ProgressPage({
     if (user && !routines.length && !routineLoading) {
       dispatch(fetchRoutines.fulfilled(initialRoutines, "", undefined));
     }
-  }, [dispatch, user, initialRoutines, routineLoading]);
-
-  useEffect(() => {
     if (user && !progress.length && !progressLoading) {
       dispatch(fetchProgress.fulfilled(initialProgress, "", undefined));
     }
-  }, [dispatch, user, initialProgress, progressLoading]);
+    setFetchingInitialData(false); // Datos iniciales cargados
+  }, [dispatch, user, initialRoutines, initialProgress, routineLoading, progressLoading]);
 
   const handleBack = () => router.push("/app/routine");
 
-  const handleClear = () => {
-    dispatch(clearProgress()).then(() => setToastMessage("Progreso limpiado correctamente"));
+  const handleClear = async () => {
+    setClearingProgress(true);
+    try {
+      await dispatch(clearProgress()).unwrap();
+      setToastMessage("Progreso limpiado correctamente");
+    } catch {
+      setToastMessage("Error al limpiar el progreso");
+    } finally {
+      setClearingProgress(false);
+    }
   };
 
   const handleCloseToast = () => setToastMessage(null);
@@ -100,24 +111,36 @@ export default function ProgressPage({
     }));
   };
 
-  const handleSaveEdit = (progressId: Types.ObjectId) => {
+  const handleSaveEdit = async (progressId: Types.ObjectId) => {
+    setSavingProgress((prev) => ({ ...prev, [progressId.toString()]: true }));
     const originalEntry = progress.find((p) => p._id === progressId);
     const updatedEntry = { ...originalEntry, ...editData[progressId.toString()] } as ProgressData;
-    dispatch(editProgress({ progressId, updatedEntry })).then(() => {
+    try {
+      await dispatch(editProgress({ progressId, updatedEntry })).unwrap();
       setToastMessage("Progreso actualizado correctamente");
       setEditData((prev) => {
         const newData = { ...prev };
         delete newData[progressId.toString()];
         return newData;
       });
-    });
+    } catch {
+      setToastMessage("Error al actualizar el progreso");
+    } finally {
+      setSavingProgress((prev) => ({ ...prev, [progressId.toString()]: false }));
+    }
   };
 
-  const handleDelete = (progressId: Types.ObjectId) => {
-    dispatch(deleteProgress(progressId)).then(() => {
+  const handleDelete = async (progressId: Types.ObjectId) => {
+    setDeletingProgress((prev) => ({ ...prev, [progressId.toString()]: true }));
+    try {
+      await dispatch(deleteProgress(progressId)).unwrap();
       setToastMessage("Progreso eliminado correctamente");
       setExpandedCardKey(null);
-    });
+    } catch {
+      setToastMessage("Error al eliminar el progreso");
+    } finally {
+      setDeletingProgress((prev) => ({ ...prev, [progressId.toString()]: false }));
+    }
   };
 
   const handleAddChange = (field: keyof Omit<ProgressData, "_id" | "userId">, value: number | string) => {
@@ -127,13 +150,15 @@ export default function ProgressPage({
     }));
   };
 
-  const handleAddSubmit = (e: React.FormEvent) => {
+  const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProgress.routineId) {
       setToastMessage("Por favor, selecciona una rutina válida.");
       return;
     }
-    dispatch(addProgress(newProgress)).then(() => {
+    setAddingProgress(true);
+    try {
+      await dispatch(addProgress(newProgress)).unwrap();
       setToastMessage("Progreso agregado correctamente");
       setShowAddForm(false);
       setNewProgress({
@@ -148,7 +173,11 @@ export default function ProgressPage({
         notes: "",
         date: new Date(),
       });
-    });
+    } catch {
+      setToastMessage("Error al agregar el progreso");
+    } finally {
+      setAddingProgress(false);
+    }
   };
 
   const filteredProgress = progress.filter((entry) => {
@@ -197,7 +226,14 @@ export default function ProgressPage({
     },
   };
 
-  if (userLoading || routineLoading || progressLoading) return <Loader />;
+  if (fetchingInitialData || userLoading || routineLoading || progressLoading) {
+    return (
+      <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col items-center justify-center">
+        <Loader />
+        <p className="text-[#D1D1D1] text-xs mt-2">Cargando progreso...</p>
+      </div>
+    );
+  }
 
   if (!routines.length && !initialRoutines.length) {
     return (
@@ -265,6 +301,8 @@ export default function ProgressPage({
                   const isExpanded = expandedCardKey === cardKey.toString();
                   const edited = editData[cardKey.toString()] || {};
                   const currentEntry = { ...entry, ...edited } as ProgressData;
+                  const isSaving = savingProgress[cardKey.toString()] || false;
+                  const isDeleting = deletingProgress[cardKey.toString()] || false;
 
                   return (
                     <Card
@@ -371,15 +409,17 @@ export default function ProgressPage({
                           <div className="flex space-x-2 mt-2">
                             <Button
                               onClick={() => handleSaveEdit(cardKey)}
-                              className="w-full bg-[#66BB6A] text-black hover:bg-[#4CAF50] rounded-md py-1 px-2 text-xs font-semibold border border-[#4CAF50] shadow-md"
+                              disabled={isSaving || isDeleting}
+                              className="w-full bg-[#66BB6A] text-black hover:bg-[#4CAF50] rounded-md py-1 px-2 text-xs font-semibold border border-[#4CAF50] shadow-md disabled:bg-[#4CAF50] disabled:opacity-50"
                             >
-                              Guardar
+                              {isSaving ? <><Loader />Guardar</> : "Guardar"}
                             </Button>
                             <Button
                               onClick={() => handleDelete(cardKey)}
-                              className="w-full bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md"
+                              disabled={isSaving || isDeleting}
+                              className="w-full bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md disabled:bg-[#D32F2F] disabled:opacity-50"
                             >
-                              Eliminar
+                              {isDeleting ? <><Loader/>Eliminar</> : "Eliminar"}
                             </Button>
                           </div>
                         </div>
@@ -543,14 +583,16 @@ export default function ProgressPage({
               <div className="flex space-x-2">
                 <Button
                   type="submit"
-                  className="w-full bg-[#66BB6A] text-black hover:bg-[#4CAF50] rounded-md py-1 px-2 text-xs font-semibold border border-[#4CAF50] shadow-md"
+                  disabled={addingProgress}
+                  className="w-full bg-[#66BB6A] text-black hover:bg-[#4CAF50] rounded-md py-1 px-2 text-xs font-semibold border border-[#4CAF50] shadow-md disabled:bg-[#4CAF50] disabled:opacity-50"
                 >
-                  Guardar
+                  {addingProgress ? <><Loader />Guardar</> : "Guardar"}
                 </Button>
                 <Button
                   type="button"
                   onClick={() => setShowAddForm(false)}
-                  className="w-full bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md"
+                  disabled={addingProgress}
+                  className="w-full bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md disabled:bg-[#D32F2F] disabled:opacity-50"
                 >
                   Cancelar
                 </Button>
@@ -563,9 +605,10 @@ export default function ProgressPage({
       <div className="fixed bottom-4 right-4 z-10">
         <Button
           onClick={handleClear}
-          className="bg-[#EF5350] text-white p-3 rounded-full shadow-md hover:bg-[#D32F2F] border border-[#D32F2F]"
+          disabled={clearingProgress}
+          className="bg-[#EF5350] text-white p-3 rounded-full shadow-md hover:bg-[#D32F2F] border border-[#D32F2F] disabled:bg-[#D32F2F] disabled:opacity-50"
         >
-          🗑️
+          {clearingProgress ? <><Loader />🗑️</> : "🗑️"}
         </Button>
       </div>
 

@@ -168,6 +168,7 @@ export default function RoutineAIPage() {
                 onChange={(e) => handleChange("days", Number(e.target.value))}
                 placeholder="Días"
                 className="flex-1 bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
+                required
               />
             </div>
             <div className="flex items-center gap-4">
