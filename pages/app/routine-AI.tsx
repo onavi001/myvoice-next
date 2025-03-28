@@ -11,6 +11,8 @@ import Card from "../../components/Card";
 import Toast from "../../components/Toast";
 import {FuturisticLoader} from "../../components/Loader"; // Asegúrate de importar SmallLoader
 import { IExercise } from "../../models/Exercise";
+import { IDay } from "../../models/Day";
+import { Types } from "mongoose";
 
 export default function RoutineAIPage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -65,7 +67,60 @@ export default function RoutineAIPage() {
       setGeneratingRoutine(false);
     }
   };
-
+  const getDefaultExercise = (): Partial<IExercise> => ({
+    name: "Ejercicio sin nombre",
+    sets: 1,
+    reps: 1,
+    weight: "0",
+    weightUnit: "kg",
+    repsUnit: "count",
+    rest: "",
+    tips: [],
+    muscleGroup: [],
+    completed: false,
+    videos: []
+  });
+  const validateAndAdjustDay = (day: RoutineData["days"][number], routineId: Types.ObjectId):
+  {routineId: Types.ObjectId; dayData: Partial<IDay>} => {
+    // Validar y ajustar dayName
+    const dayName = day.dayName && day.dayName.trim() !== "" ? day.dayName : "Día sin nombre";
+  
+    // Validar y ajustar explanation
+    const explanation = day.explanation && day.explanation.trim() !== "" ? day.explanation : "";
+  
+    // Validar y ajustar warmupOptions
+    const warmupOptions = Array.isArray(day.warmupOptions) && day.warmupOptions.length > 0 ? day.warmupOptions : [];
+  
+    // Validar y ajustar musclesWorked
+    const musclesWorked = Array.isArray(day.musclesWorked) && day.musclesWorked.length > 0 ? day.musclesWorked : [];
+  
+    // Validar y ajustar ejercicios
+    const exercises = Array.isArray(day.exercises) && day.exercises.length > 0 ? day.exercises : [getDefaultExercise()];
+    const adjustedExercises = exercises.map((ex): Partial<IExercise> => ({
+      name: ex.name && ex.name.trim() !== "" ? ex.name : "Ejercicio sin nombre",
+      sets: typeof ex.sets === "number" && ex.sets > 0 ? ex.sets : 1,
+      reps: typeof ex.reps === "number" && ex.reps > 0 ? ex.reps : 1,
+      weight: typeof ex.weight === "number" && ex.weight >= 0 ? (ex.weight as number).toString() : "0",
+      weightUnit: ex.weightUnit && ["kg", "lbs"].includes(ex.weightUnit) ? ex.weightUnit : "kg",
+      repsUnit: "count",
+      rest: ex.rest && ex.rest.trim() !== "" ? ex.rest : "",
+      tips: Array.isArray(ex.tips) && ex.tips.every((tip) => typeof tip === "string" && tip.trim() !== "") ? ex.tips : [],
+      muscleGroup: Array.isArray(ex.muscleGroup) && ex.muscleGroup.every((mg) => typeof mg === "string" && mg.trim() !== "") ? ex.muscleGroup : [],
+      completed: false,
+      videos: []
+    }));
+  
+    return {
+      routineId,
+      dayData: {
+        dayName,
+        explanation,
+        warmupOptions,
+        musclesWorked,
+        exercises: adjustedExercises as IExercise[],
+      },
+    };
+  };
   const handleSaveRoutine = async () => {
     if (!currentRoutine) return;
 
@@ -76,6 +131,10 @@ export default function RoutineAIPage() {
       ).unwrap();
       const routineId = routineResult._id;
 
+      for (const day of currentRoutine.days) {
+        const adjustedDay = validateAndAdjustDay(day, routineId);
+        await dispatch(createDay(adjustedDay)).unwrap();
+      }
       for (const day of currentRoutine.days) {
         await dispatch(
           createDay({

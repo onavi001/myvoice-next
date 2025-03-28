@@ -47,11 +47,13 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
   const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || "TU_CLAVE_API_YOUTUBE";
 
   useEffect(() => {
-    const dayIndex = localStorage.getItem("dayIndex");
-    setSelectedDayIndex(dayIndex ? parseInt(dayIndex) : 0);
-    const routineIndex = localStorage.getItem("routineIndex");
-    dispatch(selectRoutine(routineIndex ? parseInt(routineIndex) : 0));
-  }, [dispatch]);
+    if (routines.length > 0) {
+      const dayIndex = localStorage.getItem("dayIndex");
+      setSelectedDayIndex(dayIndex ? parseInt(dayIndex) : 0);
+      const routineIndex = localStorage.getItem("routineIndex");
+      dispatch(selectRoutine(routineIndex ? parseInt(routineIndex) : 0)); 
+    }
+  }, [dispatch,routines]);
 
   useEffect(() => {
     if (initialRoutines && routines.length === 0) {
@@ -316,7 +318,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
 
   const selectedRoutine = routines[selectedRoutineIndex] ? routines[selectedRoutineIndex] : routines[0];
   const selectedDay = selectedRoutine.days[selectedDayIndex] ? selectedRoutine.days[selectedDayIndex] : selectedRoutine.days[0];
-  const { circuits, standalone } = groupExercisesByCircuit(selectedDay.exercises as unknown as IExercise[]);
+  const { circuits, standalone } = groupExercisesByCircuit(selectedDay?.exercises as unknown as IExercise[]);
 
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
@@ -792,21 +794,27 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "my-super-secret-key") as { userId: string };
 
     const routines = await RoutineModel.find({ userId: decoded.userId })
-      .populate({
-        path: "days",
-        model: DayModel,
+    .populate({
+      path: "days",
+      model: DayModel,
+      populate: {
+        path: "exercises",
+        model: ExerciseModel,
         populate: {
-          path: "exercises",
-          model: ExerciseModel,
-          populate: {
-            path: "videos",
-            model: VideoModel,
-          },
+          path: "videos",
+          model: VideoModel,
         },
-      })
-      .lean();
-
-    const serializedRoutines = routines.map((r) => ({
+      },
+    })
+    .lean();
+    const validRoutines = routines.filter((routine) => {
+      const hasValidDays = routine.days.length > 0 && routine.days.every((day: Partial<IDay>) => {
+        const exercises = day.exercises ?? [];
+        return exercises.length > 0;
+      });
+      return hasValidDays;
+    });
+    const serializedRoutines = validRoutines.map((r) => ({
       _id: r._id.toString(),
       userId: r.userId.toString(),
       name: r.name,
@@ -840,7 +848,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
       updatedAt: r.updatedAt ? new Date(r.updatedAt).toISOString() : new Date().toISOString(),
     }));
-    console.log(serializedRoutines);
     return { props: { initialRoutines: serializedRoutines } };
   } catch (error) {
     console.error("Error en getServerSideProps:", error);

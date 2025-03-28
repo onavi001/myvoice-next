@@ -22,25 +22,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (!level || !goal || !days || !equipment) {
             return res.status(400).json({ error: "Faltan parámetros requeridos" });
         }
-        console.log(req.headers.authorization)
-        if (!req.headers.authorization) {
-            return res.status(401).json({ message: "Unauthorized" });
-        }
         const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
         if (!token) return res.status(401).json({ message: "No autenticado" });
         
         // Prompt actualizado
         const prompt = `
             Genera una rutina de entrenamiento personalizada y detallada llamada "${name}" para un usuario con:
-            - Objetivo: ${goal} (fuerza: levantamientos pesados; hipertrofia: volumen; resistencia: alta repetición)
+            - Objetivo: ${goal} (fuerza: levantamientos pesados o equivalentes; hipertrofia: volumen; resistencia: alta repetición)
             - Nivel: ${level} (principiante: básico; intermedio: mixto; avanzado: complejo)
             - Días: ${days} (exactamente este número)
-            - Equipo: ${equipment} (gym: máquinas y pesas; casa: peso corporal; pesas: pesas libres)
+            - Equipo: ${equipment} (gym: máquinas y pesas; casa: solo peso corporal o equipo mínimo como bandas/mantecas ligeras; pesas: pesas libres)
             ${notes ? `- Notas (obligatorio seguir): "${notes}"` : ""}
             **Instrucciones:**
             - Genera una rutina con ${days} días, cada uno con 6 ejercicios únicos y específicos (no repitas entre días).
-            - Por ejercicio: "name" (ej. "Press de banca con barra"), "muscleGroup" (grupo muscular principal), "sets" (3-5), "reps" (6-15 según objetivo), "weight" (valor numérico o rango como "10-15", sin unidad), "weightUnit" ("kg" por defecto), "rest" (ej. "60s"), "tips" (array con 2 consejos), "completed" (false), "videos" (array vacío), "notes" (string vacío o basado en las notas si aplica).
-            - Por día: "dayName" (descriptivo, ej. "Pecho y Tríceps"), "musclesWorked" (array de 3 músculos), "warmupOptions" (array de 3 calentamientos relevantes), "explanation" (breve, 15-20 palabras).
+            - Para "casa": usa solo ejercicios de peso corporal (ej. flexiones, sentadillas) o con equipo mínimo (ej. bandas, mancuernas ligeras); evita máquinas o pesas pesadas.
+            - Por ejercicio: "name" (ej. "Flexiones"), "muscleGroup" (grupo muscular principal), "sets" (3-5), "reps" (6-15 según objetivo), "weight" ("0" si es peso corporal, rango como "5-10" si aplica), "weightUnit" ("kg" o "lb"), "rest" (ej. "60s"), "tips" (array con 2 consejos), "completed" (false), "videos" (array vacío), "notes" (string vacío o basado en las notas si aplica).
+            - Por día: "dayName" (descriptivo, ej. "Cuerpo completo en casa"), "musclesWorked" (array de 3 músculos), "warmupOptions" (array de 3 calentamientos sin equipo, ej. "Saltos"), "explanation" (breve, 15-20 palabras).
             - Incluye "_id" como string ficticio para cada nivel (ej. "routine1", "day1", "exercise1"), "userId" como "user123", "createdAt" y "updatedAt" como ISO strings actuales.
             **Formato JSON estricto:**
             - Devuelve SOLO el objeto JSON, sin texto adicional, sin bloques de código (como ${"```json"}), sin comentarios ni explicaciones fuera del JSON.
@@ -64,7 +61,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     "reps": 8,
                     "repsUnit": "count",
                     "weight": "10",
-                    "weightUnit": "kg",
                     "rest": "...",
                     "tips": ["...", "..."],
                     "completed": false,
@@ -79,7 +75,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
             Devuelve solo el objeto JSON, sin texto adicional fuera del JSON.
         `;
-        
+        console.log(prompt)
         // Llamada a la API de Groq
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",

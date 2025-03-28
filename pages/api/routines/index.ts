@@ -23,17 +23,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   switch (req.method) {
     case "GET":
       try {
-        console.log("aqui")
-        const routines = await Routine.find({ userId })
-          .populate({
-            path: "days",
-            populate: {
-              path: "exercises",
-              populate: { path: "videos" },
-            },
-          })
-          .lean();
-        const serializedRoutines = routines.map((r) => ({
+        const routines = await Routine.find({
+          userId,
+          name: { $ne: null }, // Filtra rutinas con nombre no vacío ni null
+          "days.0": { $exists: true }, // Asegura que haya al menos un día
+        })
+        .populate({
+          path: "days",
+          populate: {
+            path: "exercises",
+            populate: { path: "videos" },
+          },
+        })
+        .lean();
+        const validRoutines = routines.filter((routine) => {
+          const hasValidDays = routine.days.length > 0 && routine.days.every((day: Partial<IDay>) => {
+            const exercises = day.exercises ?? [];
+            return exercises.length > 0;
+          });
+          return hasValidDays;
+        });
+        const serializedRoutines = validRoutines.map((r) => ({
           _id: r._id.toString(),
           userId: r.userId.toString(),
           name: r.name,

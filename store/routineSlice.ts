@@ -38,6 +38,7 @@ export const fetchRoutines = createAsyncThunk<RoutineData[], void, { rejectValue
   async (_, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
+    console.log("aqui")
     try {
       const response = await fetch("/api/routines", {
         headers: { Authorization: `Bearer ${token}` },
@@ -61,6 +62,7 @@ export const createRoutine = createAsyncThunk<RoutineData, IRoutine, { rejectVal
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
+      console.log("aqui")
       const response = await fetch("/api/routines", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -130,8 +132,11 @@ export const selectRoutine = createAsyncThunk<number, number, { rejectValue: Thu
   async (index, { getState, rejectWithValue }) => {
     const state = getState() as { routine: RoutineState };
     localStorage.setItem("routineIndex", index.toString());
+    console.log(state.routine.routines)
     if (index >= 0 && index < state.routine.routines.length) {
       return index;
+    }else{
+      return 0;
     }
     return rejectWithValue({ message: "Índice de rutina inválido" });
   }
