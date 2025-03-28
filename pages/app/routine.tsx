@@ -6,6 +6,7 @@ import {
   selectRoutine,
   updateExerciseCompleted,
   setExerciseVideos,
+  ThunkError,
 } from "../../store/routineSlice";
 import { addProgress } from "../../store/progressSlice";
 import { useRouter } from "next/router";
@@ -94,8 +95,13 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
           })
         ).unwrap();
       }
-    } catch (error) {
-      console.error("Error fetching YouTube video:", error);
+    } catch (err) {
+      const error = err as ThunkError;
+      if (error.message === "Unauthorized" && error.status === 401) {
+        router.push("/login");
+      } else {
+        console.error("Error fetching YouTube video:", error);
+      }
     } finally {
       setLoadingVideos((prev) => ({ ...prev, [exerciseIndex]: false }));
     }
@@ -169,8 +175,13 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
             return newData;
           });
         }
-      } catch (error) {
-        console.error("Error saving progress:", error);
+      } catch (err) {
+        const error = err as ThunkError;
+        if (error.message === "Unauthorized" && error.status === 401) {
+          router.push("/login");
+        } else {
+          console.error("Error saving progress:", error);
+        }
       } finally {
         setSavingProgress((prev) => ({ ...prev, [key]: false }));
       }
@@ -210,8 +221,13 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
               videos: updatedVideos,
             })
           ).unwrap();
-        } catch (error) {
-          console.error("Error switching video:", error);
+        } catch (err) {
+          const error = err as ThunkError;
+          if (error.message === "Unauthorized" && error.status === 401) {
+            router.push("/login");
+          } else {
+            console.error("Error switching video:", error);
+          }
         } finally {
           setSwitchingVideos((prev) => ({ ...prev, [exerciseIndex]: false }));
         }
@@ -227,8 +243,13 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
         await dispatch(
           updateExerciseCompleted({ routineId, dayIndex, exerciseIndex, completed: !currentCompleted })
         ).unwrap();
-      } catch (error) {
-        console.error("Error toggling completed:", error);
+      } catch (err) {
+        const error = err as ThunkError;
+          if (error.message === "Unauthorized" && error.status === 401) {
+            router.push("/login");
+          } else {
+            console.error("Error toggling completed:", error);
+          }
       } finally {
         setTogglingCompleted((prev) => ({ ...prev, [exerciseIndex]: false }));
       }

@@ -30,6 +30,9 @@ export const addProgress = createAsyncThunk(
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ ...progressData, userId, date: progressData.date.toISOString() }),
       });
+      if (response.status === 401) {
+        return rejectWithValue({ message: "Unauthorized", status: 401 });
+      }
       if (!response.ok) throw new Error("Error al agregar progreso");
       const data = await response.json();
       return { ...data, date: new Date(data.date).toISOString() } as ProgressData;
@@ -77,6 +80,9 @@ export const editProgress = createAsyncThunk(
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify(serializedEntry),
       });
+      if (response.status === 401) {
+        return rejectWithValue({ message: "Unauthorized", status: 401 });
+      }
       if (!response.ok) throw new Error("Error al editar progreso");
       const data = await response.json();
       return { ...data, date: new Date(data.date).toISOString() } as ProgressData;
@@ -97,6 +103,9 @@ export const deleteProgress = createAsyncThunk(
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (response.status === 401) {
+        return rejectWithValue({ message: "Unauthorized", status: 401 });
+      }
       if (!response.ok) throw new Error("Error al eliminar progreso");
       return progressId;
     } catch (error) {
@@ -116,6 +125,9 @@ export const clearProgress = createAsyncThunk(
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (response.status === 401) {
+        return rejectWithValue({ message: "Unauthorized", status: 401 });
+      }
       if (!response.ok) throw new Error("Error al limpiar progreso");
       return true;
     } catch (error) {

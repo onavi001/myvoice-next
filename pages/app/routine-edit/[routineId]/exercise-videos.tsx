@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../../../store";
-import { updateExercise } from "../../../../store/routineSlice";
+import { ThunkError, updateExercise } from "../../../../store/routineSlice";
 import Button from "../../../../components/Button";
 import Input from "../../../../components/Input";
 import Card from "../../../../components/Card";
@@ -89,8 +89,13 @@ export default function ExerciseVideosPage() {
 
       router.push(`/app/routine-edit/${routineId}`);
     } catch (err) {
-      setError("Error al actualizar los videos");
-      console.error(err);
+      const error = err as ThunkError;
+      if (error.message === "Unauthorized" && error.status === 401) {
+        router.push("/login");
+      } else {
+        setError("Error al actualizar los videos");
+        console.error(err);
+      }
     } finally {
       setLoading(false);
     }

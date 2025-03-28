@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { useRouter } from "next/router";
 import { AppDispatch } from "../../store";
-import { createRoutine } from "../../store/routineSlice";
+import { createRoutine, ThunkError } from "../../store/routineSlice";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import Card from "../../components/Card";
@@ -228,8 +228,13 @@ export default function RoutineFormPage() {
       await dispatch(createRoutine({ name: routineName, days: cleanedDays } as unknown as IRoutine)).unwrap();
       router.push("/app/routine");
     } catch (err) {
-      setError("Error al crear la rutina");
-      console.error(err);
+      const error = err as ThunkError;
+      if (error.message === "Unauthorized" && error.status === 401) {
+        router.push("/login");
+      } else {
+        setError("Error al crear la rutina");
+        console.error(err);
+      }
     } finally {
       setCreatingRoutine(false);
     }

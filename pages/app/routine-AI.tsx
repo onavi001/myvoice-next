@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../store";
-import { createDay, createRoutine, generateRoutine } from "../../store/routineSlice";
+import { createDay, createRoutine, generateRoutine, ThunkError } from "../../store/routineSlice";
 import { IRoutine, RoutineData } from "../../models/Routine";
 import { useRouter } from "next/router";
 import Head from "next/head";
@@ -54,8 +54,13 @@ export default function RoutineAIPage() {
         setToastMessage("Error al generar la rutina");
       }
     } catch (err) {
-      setToastMessage("Error al generar la rutina");
-      console.error("Error al generar rutina:", err);
+      const error = err as ThunkError;
+      if (error.message === "Unauthorized" && error.status === 401) {
+        router.push("/login");
+      } else {
+        setToastMessage("Error al generar la rutina");
+        console.error("Error al generar rutina:", error.message);
+      }
     } finally {
       setGeneratingRoutine(false);
     }
@@ -100,8 +105,13 @@ export default function RoutineAIPage() {
       setCurrentRoutine(null);
       setTimeout(() => router.push("/app/routine"), 1000);
     } catch (err) {
-      console.error("Error al guardar rutina:", err);
-      setToastMessage("Error al guardar la rutina");
+      const error = err as ThunkError;
+      if (error.message === "Unauthorized" && error.status === 401) {
+        router.push("/login");
+      } else {
+        setToastMessage("Error al generar la rutina");
+        console.error("Error al generar rutina:", error.message);
+      }
     } finally {
       setSavingRoutine(false);
     }

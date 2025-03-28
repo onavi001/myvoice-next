@@ -3,6 +3,12 @@ import { IRoutine, RoutineData } from "../models/Routine";
 import { IDay } from "../models/Day";
 import { Types } from "mongoose";
 
+// Tipo para errores devueltos por las acciones asíncronas
+export interface ThunkError {
+  message: string;
+  status?: number;
+}
+
 interface RoutineInput {
   level: "principiante" | "intermedio" | "avanzado";
   goal: "fuerza" | "hipertrofia" | "resistencia";
@@ -27,7 +33,7 @@ const initialState: RoutineState = {
 };
 
 // Fetch todas las rutinas del usuario
-export const fetchRoutines = createAsyncThunk(
+export const fetchRoutines = createAsyncThunk<RoutineData[], void, { rejectValue: ThunkError }>(
   "routine/fetchRoutines",
   async (_, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
@@ -36,19 +42,22 @@ export const fetchRoutines = createAsyncThunk(
       const response = await fetch("/api/routines", {
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (response.status === 401) {
+        return rejectWithValue({ message: "Unauthorized", status: 401 });
+      }
       if (!response.ok) throw new Error("Error al obtener rutinas");
       const data = await response.json();
       return data as RoutineData[];
     } catch (error) {
-      return rejectWithValue((error as Error).message);
+      return rejectWithValue({ message: (error as Error).message });
     }
   }
 );
 
 // Crear una nueva rutina
-export const createRoutine = createAsyncThunk(
+export const createRoutine = createAsyncThunk<RoutineData, IRoutine, { rejectValue: ThunkError }>(
   "routine/createRoutine",
-  async (routineData: IRoutine, { getState, rejectWithValue }) => {
+  async (routineData, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
@@ -57,19 +66,22 @@ export const createRoutine = createAsyncThunk(
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify(routineData),
       });
+      if (response.status === 401) {
+        return rejectWithValue({ message: "Unauthorized", status: 401 });
+      }
       if (!response.ok) throw new Error("Error al crear rutina");
       const data = await response.json();
       return data as RoutineData;
     } catch (error) {
-      return rejectWithValue((error as Error).message);
+      return rejectWithValue({ message: (error as Error).message });
     }
   }
 );
 
 // Actualizar una rutina
-export const updateRoutine = createAsyncThunk(
+export const updateRoutine = createAsyncThunk<RoutineData, RoutineData, { rejectValue: ThunkError }>(
   "routine/updateRoutine",
-  async (routineData: RoutineData, { getState, rejectWithValue }) => {
+  async (routineData, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
@@ -78,19 +90,22 @@ export const updateRoutine = createAsyncThunk(
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ routineData }),
       });
+      if (response.status === 401) {
+        return rejectWithValue({ message: "Unauthorized", status: 401 });
+      }
       if (!response.ok) throw new Error("Error al actualizar rutina");
       const data = await response.json();
       return data as RoutineData;
     } catch (error) {
-      return rejectWithValue((error as Error).message);
+      return rejectWithValue({ message: (error as Error).message });
     }
   }
 );
 
 // Eliminar una rutina
-export const deleteRoutine = createAsyncThunk(
+export const deleteRoutine = createAsyncThunk<Types.ObjectId, Types.ObjectId, { rejectValue: ThunkError }>(
   "routine/deleteRoutine",
-  async (routineId: Types.ObjectId, { getState, rejectWithValue }) => {
+  async (routineId, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
@@ -98,34 +113,38 @@ export const deleteRoutine = createAsyncThunk(
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (response.status === 401) {
+        return rejectWithValue({ message: "Unauthorized", status: 401 });
+      }
       if (!response.ok) throw new Error("Error al eliminar rutina");
       return routineId;
     } catch (error) {
-      return rejectWithValue((error as Error).message);
+      return rejectWithValue({ message: (error as Error).message });
     }
   }
 );
 
-// Seleccionar una rutina
-export const selectRoutine = createAsyncThunk(
+// Seleccionar una rutina (no necesita manejo de 401 ya que es local)
+export const selectRoutine = createAsyncThunk<number, number, { rejectValue: ThunkError }>(
   "routine/selectRoutine",
-  async (index: number, { getState }) => {
+  async (index, { getState, rejectWithValue }) => {
     const state = getState() as { routine: RoutineState };
     localStorage.setItem("routineIndex", index.toString());
     if (index >= 0 && index < state.routine.routines.length) {
       return index;
     }
-    throw new Error("Índice de rutina inválido");
+    return rejectWithValue({ message: "Índice de rutina inválido" });
   }
 );
 
 // Crear un día en una rutina
-export const createDay = createAsyncThunk(
+export const createDay = createAsyncThunk<
+  { routineId: Types.ObjectId; day: RoutineData["days"][number] },
+  { routineId: Types.ObjectId; dayData: Partial<IDay> },
+  { rejectValue: ThunkError }
+>(
   "routine/createDay",
-  async (
-    { routineId, dayData }: { routineId: Types.ObjectId; dayData: Partial<IDay> },
-    { getState, rejectWithValue }
-  ) => {
+  async ({ routineId, dayData }, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
@@ -134,22 +153,26 @@ export const createDay = createAsyncThunk(
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify(dayData),
       });
+      if (response.status === 401) {
+        return rejectWithValue({ message: "Unauthorized", status: 401 });
+      }
       if (!response.ok) throw new Error("Error al crear día");
       const data = await response.json();
       return { routineId, day: data };
     } catch (error) {
-      return rejectWithValue((error as Error).message);
+      return rejectWithValue({ message: (error as Error).message });
     }
   }
 );
 
 // Actualizar un día
-export const updateDay = createAsyncThunk(
+export const updateDay = createAsyncThunk<
+  { routineId: Types.ObjectId; dayId: Types.ObjectId; dayName: string },
+  { routineId: Types.ObjectId; dayId: Types.ObjectId; dayName: string },
+  { rejectValue: ThunkError }
+>(
   "routine/updateDay",
-  async (
-    { routineId, dayId, dayName }: { routineId: Types.ObjectId; dayId: Types.ObjectId; dayName: string },
-    { getState, rejectWithValue }
-  ) => {
+  async ({ routineId, dayId, dayName }, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
@@ -158,22 +181,26 @@ export const updateDay = createAsyncThunk(
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ dayName }),
       });
+      if (response.status === 401) {
+        return rejectWithValue({ message: "Unauthorized", status: 401 });
+      }
       if (!response.ok) throw new Error("Error al actualizar día");
       const data = await response.json();
       return { routineId, dayId, dayName: data.dayName };
     } catch (error) {
-      return rejectWithValue((error as Error).message);
+      return rejectWithValue({ message: (error as Error).message });
     }
   }
 );
 
 // Eliminar un día
-export const deleteDay = createAsyncThunk(
+export const deleteDay = createAsyncThunk<
+  { routineId: Types.ObjectId; dayId: Types.ObjectId },
+  { routineId: Types.ObjectId; dayId: Types.ObjectId },
+  { rejectValue: ThunkError }
+>(
   "routine/deleteDay",
-  async (
-    { routineId, dayId }: { routineId: Types.ObjectId; dayId: Types.ObjectId },
-    { getState, rejectWithValue }
-  ) => {
+  async ({ routineId, dayId }, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
@@ -181,25 +208,25 @@ export const deleteDay = createAsyncThunk(
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (response.status === 401) {
+        return rejectWithValue({ message: "Unauthorized", status: 401 });
+      }
       if (!response.ok) throw new Error("Error al eliminar día");
       return { routineId, dayId };
     } catch (error) {
-      return rejectWithValue((error as Error).message);
+      return rejectWithValue({ message: (error as Error).message });
     }
   }
 );
 
 // Crear un ejercicio en un día
-export const createExercise = createAsyncThunk(
+export const createExercise = createAsyncThunk<
+  { routineId: Types.ObjectId; dayId: Types.ObjectId; exercise: RoutineData["days"][number]["exercises"][number] },
+  { routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseData: { name: string; sets: number; reps: number } },
+  { rejectValue: ThunkError }
+>(
   "routine/createExercise",
-  async (
-    {
-      routineId,
-      dayId,
-      exerciseData,
-    }: { routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseData: { name: string; sets: number; reps: number } },
-    { getState, rejectWithValue }
-  ) => {
+  async ({ routineId, dayId, exerciseData }, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
@@ -208,32 +235,26 @@ export const createExercise = createAsyncThunk(
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify(exerciseData),
       });
+      if (response.status === 401) {
+        return rejectWithValue({ message: "Unauthorized", status: 401 });
+      }
       if (!response.ok) throw new Error("Error al crear ejercicio");
       const data = await response.json();
       return { routineId, dayId, exercise: data };
     } catch (error) {
-      return rejectWithValue((error as Error).message);
+      return rejectWithValue({ message: (error as Error).message });
     }
   }
 );
 
 // Actualizar un ejercicio
-export const updateExercise = createAsyncThunk(
+export const updateExercise = createAsyncThunk<
+  { routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseId: Types.ObjectId; exercise: RoutineData["days"][number]["exercises"][number] },
+  { routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseId: Types.ObjectId; exerciseData: Partial<RoutineData["days"][number]["exercises"][number]> },
+  { rejectValue: ThunkError }
+>(
   "routine/updateExercise",
-  async (
-    {
-      routineId,
-      dayId,
-      exerciseId,
-      exerciseData,
-    }: {
-      routineId: Types.ObjectId;
-      dayId: Types.ObjectId;
-      exerciseId: Types.ObjectId;
-      exerciseData: Partial<RoutineData["days"][number]["exercises"][number]>;
-    },
-    { getState, rejectWithValue }
-  ) => {
+  async ({ routineId, dayId, exerciseId, exerciseData }, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
@@ -242,22 +263,26 @@ export const updateExercise = createAsyncThunk(
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify(exerciseData),
       });
+      if (response.status === 401) {
+        return rejectWithValue({ message: "Unauthorized", status: 401 });
+      }
       if (!response.ok) throw new Error("Error al actualizar ejercicio");
       const data = await response.json();
       return { routineId, dayId, exerciseId, exercise: data };
     } catch (error) {
-      return rejectWithValue((error as Error).message);
+      return rejectWithValue({ message: (error as Error).message });
     }
   }
 );
 
 // Eliminar un ejercicio
-export const deleteExercise = createAsyncThunk(
+export const deleteExercise = createAsyncThunk<
+  { routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseId: Types.ObjectId },
+  { routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseId: Types.ObjectId },
+  { rejectValue: ThunkError }
+>(
   "routine/deleteExercise",
-  async (
-    { routineId, dayId, exerciseId }: { routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseId: Types.ObjectId },
-    { getState, rejectWithValue }
-  ) => {
+  async ({ routineId, dayId, exerciseId }, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
@@ -265,26 +290,25 @@ export const deleteExercise = createAsyncThunk(
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (response.status === 401) {
+        return rejectWithValue({ message: "Unauthorized", status: 401 });
+      }
       if (!response.ok) throw new Error("Error al eliminar ejercicio");
       return { routineId, dayId, exerciseId };
     } catch (error) {
-      return rejectWithValue((error as Error).message);
+      return rejectWithValue({ message: (error as Error).message });
     }
   }
 );
 
 // Actualizar el estado de completado de un ejercicio
-export const updateExerciseCompleted = createAsyncThunk(
+export const updateExerciseCompleted = createAsyncThunk<
+  { routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; completed: boolean },
+  { routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; completed: boolean },
+  { rejectValue: ThunkError }
+>(
   "routine/updateExerciseCompleted",
-  async (
-    {
-      routineId,
-      dayIndex,
-      exerciseIndex,
-      completed,
-    }: { routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; completed: boolean },
-    { getState, rejectWithValue }
-  ) => {
+  async ({ routineId, dayIndex, exerciseIndex, completed }, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string }; routine: RoutineState };
     const token = state.user.token;
     const exerciseId = state.routine.routines[state.routine.selectedRoutineIndex!].days[dayIndex].exercises[
@@ -297,27 +321,26 @@ export const updateExerciseCompleted = createAsyncThunk(
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ completed }),
       });
+      if (response.status === 401) {
+        return rejectWithValue({ message: "Unauthorized", status: 401 });
+      }
       if (!response.ok) throw new Error("Error al actualizar ejercicio");
       const updatedExercise = await response.json();
       return { routineId, dayIndex, exerciseIndex, completed: updatedExercise.completed };
     } catch (error) {
-      return rejectWithValue((error as Error).message);
+      return rejectWithValue({ message: (error as Error).message });
     }
   }
 );
 
 // Establecer videos para un ejercicio
-export const setExerciseVideos = createAsyncThunk(
+export const setExerciseVideos = createAsyncThunk<
+  { routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; videos: { _id: Types.ObjectId; url: string; isCurrent: boolean }[] },
+  { routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; videos: { url: string; isCurrent: boolean }[] },
+  { rejectValue: ThunkError }
+>(
   "routine/setExerciseVideos",
-  async (
-    {
-      routineId,
-      dayIndex,
-      exerciseIndex,
-      videos,
-    }: { routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; videos: { url: string; isCurrent: boolean }[] },
-    { getState, rejectWithValue }
-  ) => {
+  async ({ routineId, dayIndex, exerciseIndex, videos }, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string }; routine: RoutineState };
     const token = state.user.token;
     const exerciseId = state.routine.routines[state.routine.selectedRoutineIndex!].days[dayIndex].exercises[
@@ -325,7 +348,6 @@ export const setExerciseVideos = createAsyncThunk(
     ]._id;
 
     try {
-      // Crear o actualizar videos
       const videoIds = [];
       for (const video of videos) {
         const response = await fetch("/api/videos", {
@@ -333,31 +355,36 @@ export const setExerciseVideos = createAsyncThunk(
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
           body: JSON.stringify(video),
         });
+        if (response.status === 401) {
+          return rejectWithValue({ message: "Unauthorized", status: 401 });
+        }
         if (!response.ok) throw new Error("Error al crear video");
         const newVideo = await response.json();
         videoIds.push(newVideo._id);
       }
 
-      // Actualizar el ejercicio con los nuevos videoIds
       const response = await fetch(`/api/exercises/${exerciseId}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ videos: videoIds }),
       });
+      if (response.status === 401) {
+        return rejectWithValue({ message: "Unauthorized", status: 401 });
+      }
       if (!response.ok) throw new Error("Error al actualizar videos del ejercicio");
       const updatedExercise = await response.json();
 
       return { routineId, dayIndex, exerciseIndex, videos: updatedExercise.videos };
     } catch (error) {
-      return rejectWithValue((error as Error).message);
+      return rejectWithValue({ message: (error as Error).message });
     }
   }
 );
 
 // Generar una rutina
-export const generateRoutine = createAsyncThunk(
+export const generateRoutine = createAsyncThunk<RoutineData, RoutineInput, { rejectValue: ThunkError }>(
   "routine/generateRoutine",
-  async (input: RoutineInput, { rejectWithValue }) => {
+  async (input, { rejectWithValue }) => {
     try {
       const response = await fetch("/api/routines/generate", {
         method: "POST",
@@ -366,12 +393,14 @@ export const generateRoutine = createAsyncThunk(
         },
         body: JSON.stringify(input),
       });
-
-      if (!response.ok) throw new Error("Error al generar la rutina");
+      if (!response.ok){
+        return rejectWithValue({ message: response.statusText, status: response.status });
+      }
+      if (!response.ok) throw new Error("Error al actualizar videos del ejercicio");
       const routine: RoutineData = await response.json();
       return routine;
     } catch (error) {
-      return rejectWithValue((error as Error).message);
+      return rejectWithValue({ message: (error as Error).message });
     }
   }
 );
@@ -392,17 +421,17 @@ const routineSlice = createSlice({
         state.routines = action.payload;
         state.selectedRoutineIndex = action.payload.length > 0 ? 0 : null;
       })
-      .addCase(fetchRoutines.rejected, (state, action) => {
+      .addCase(fetchRoutines.rejected, (state, action: PayloadAction<ThunkError | undefined>) => {
         state.loading = false;
-        state.error = action.payload as string;
+        state.error = action.payload?.message ?? "Error desconocido";
       })
       // Create Routine
       .addCase(createRoutine.fulfilled, (state, action: PayloadAction<RoutineData>) => {
         state.routines.push(action.payload);
         state.selectedRoutineIndex = state.routines.length - 1;
       })
-      .addCase(createRoutine.rejected, (state, action) => {
-        state.error = action.payload as string;
+      .addCase(createRoutine.rejected, (state, action: PayloadAction<ThunkError | undefined>) => {
+        state.error = action.payload?.message ?? "Error desconocido";
       })
       // Update Routine
       .addCase(updateRoutine.fulfilled, (state, action: PayloadAction<RoutineData>) => {
@@ -411,20 +440,23 @@ const routineSlice = createSlice({
           state.routines[index] = action.payload;
         }
       })
-      .addCase(updateRoutine.rejected, (state, action) => {
-        state.error = action.payload as string;
+      .addCase(updateRoutine.rejected, (state, action: PayloadAction<ThunkError | undefined>) => {
+        state.error = action.payload?.message ?? "Error desconocido";
       })
       // Delete Routine
       .addCase(deleteRoutine.fulfilled, (state, action: PayloadAction<Types.ObjectId>) => {
         state.routines = state.routines.filter((r) => r._id !== action.payload);
         state.selectedRoutineIndex = state.routines.length > 0 ? 0 : null;
       })
-      .addCase(deleteRoutine.rejected, (state, action) => {
-        state.error = action.payload as string;
+      .addCase(deleteRoutine.rejected, (state, action: PayloadAction<ThunkError | undefined>) => {
+        state.error = action.payload?.message ?? "Error desconocido";
       })
       // Select Routine
       .addCase(selectRoutine.fulfilled, (state, action: PayloadAction<number>) => {
         state.selectedRoutineIndex = action.payload;
+      })
+      .addCase(selectRoutine.rejected, (state, action: PayloadAction<ThunkError | undefined>) => {
+        state.error = action.payload?.message ?? "Error desconocido";
       })
       // Create Day
       .addCase(createDay.fulfilled, (state, action: PayloadAction<{ routineId: Types.ObjectId; day: RoutineData["days"][number] }>) => {
@@ -433,8 +465,8 @@ const routineSlice = createSlice({
           state.routines[routineIndex].days.push(action.payload.day);
         }
       })
-      .addCase(createDay.rejected, (state, action) => {
-        state.error = action.payload as string;
+      .addCase(createDay.rejected, (state, action: PayloadAction<ThunkError | undefined>) => {
+        state.error = action.payload?.message ?? "Error desconocido";
       })
       // Update Day
       .addCase(updateDay.fulfilled, (state, action: PayloadAction<{ routineId: Types.ObjectId; dayId: Types.ObjectId; dayName: string }>) => {
@@ -446,8 +478,8 @@ const routineSlice = createSlice({
           }
         }
       })
-      .addCase(updateDay.rejected, (state, action) => {
-        state.error = action.payload as string;
+      .addCase(updateDay.rejected, (state, action: PayloadAction<ThunkError | undefined>) => {
+        state.error = action.payload?.message ?? "Error desconocido";
       })
       // Delete Day
       .addCase(deleteDay.fulfilled, (state, action: PayloadAction<{ routineId: Types.ObjectId; dayId: Types.ObjectId }>) => {
@@ -456,8 +488,8 @@ const routineSlice = createSlice({
           state.routines[routineIndex].days = state.routines[routineIndex].days.filter((d) => d._id !== action.payload.dayId);
         }
       })
-      .addCase(deleteDay.rejected, (state, action) => {
-        state.error = action.payload as string;
+      .addCase(deleteDay.rejected, (state, action: PayloadAction<ThunkError | undefined>) => {
+        state.error = action.payload?.message ?? "Error desconocido";
       })
       // Create Exercise
       .addCase(createExercise.fulfilled, (state, action: PayloadAction<{ routineId: Types.ObjectId; dayId: Types.ObjectId; exercise: RoutineData["days"][number]["exercises"][number] }>) => {
@@ -469,8 +501,8 @@ const routineSlice = createSlice({
           }
         }
       })
-      .addCase(createExercise.rejected, (state, action) => {
-        state.error = action.payload as string;
+      .addCase(createExercise.rejected, (state, action: PayloadAction<ThunkError | undefined>) => {
+        state.error = action.payload?.message ?? "Error desconocido";
       })
       // Update Exercise
       .addCase(updateExercise.fulfilled, (state, action: PayloadAction<{ routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseId: Types.ObjectId; exercise: RoutineData["days"][number]["exercises"][number] }>) => {
@@ -485,8 +517,8 @@ const routineSlice = createSlice({
           }
         }
       })
-      .addCase(updateExercise.rejected, (state, action) => {
-        state.error = action.payload as string;
+      .addCase(updateExercise.rejected, (state, action: PayloadAction<ThunkError | undefined>) => {
+        state.error = action.payload?.message ?? "Error desconocido";
       })
       // Delete Exercise
       .addCase(deleteExercise.fulfilled, (state, action: PayloadAction<{ routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseId: Types.ObjectId }>) => {
@@ -500,8 +532,8 @@ const routineSlice = createSlice({
           }
         }
       })
-      .addCase(deleteExercise.rejected, (state, action) => {
-        state.error = action.payload as string;
+      .addCase(deleteExercise.rejected, (state, action: PayloadAction<ThunkError | undefined>) => {
+        state.error = action.payload?.message ?? "Error desconocido";
       })
       // Update Exercise Completed
       .addCase(updateExerciseCompleted.fulfilled, (state, action: PayloadAction<{ routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; completed: boolean }>) => {
@@ -510,8 +542,8 @@ const routineSlice = createSlice({
           state.routines[state.selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex].completed = completed;
         }
       })
-      .addCase(updateExerciseCompleted.rejected, (state, action) => {
-        state.error = action.payload as string;
+      .addCase(updateExerciseCompleted.rejected, (state, action: PayloadAction<ThunkError | undefined>) => {
+        state.error = action.payload?.message ?? "Error desconocido";
       })
       // Set Exercise Videos
       .addCase(setExerciseVideos.fulfilled, (state, action: PayloadAction<{ routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; videos: { _id: Types.ObjectId; url: string; isCurrent: boolean }[] }>) => {
@@ -520,8 +552,8 @@ const routineSlice = createSlice({
           state.routines[state.selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex].videos = videos;
         }
       })
-      .addCase(setExerciseVideos.rejected, (state, action) => {
-        state.error = action.payload as string;
+      .addCase(setExerciseVideos.rejected, (state, action: PayloadAction<ThunkError | undefined>) => {
+        state.error = action.payload?.message ?? "Error desconocido";
       })
       // Generate Routine
       .addCase(generateRoutine.pending, (state) => {
@@ -532,9 +564,9 @@ const routineSlice = createSlice({
         state.loading = false;
         state.routines.push(action.payload);
       })
-      .addCase(generateRoutine.rejected, (state, action) => {
+      .addCase(generateRoutine.rejected, (state, action: PayloadAction<ThunkError | undefined>) => {
         state.loading = false;
-        state.error = action.payload as string;
+        state.error = action.payload?.message ?? "Error desconocido";
       });
   },
 });

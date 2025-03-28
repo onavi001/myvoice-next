@@ -5,7 +5,7 @@ import { GetServerSideProps } from "next";
 import jwt from "jsonwebtoken";
 import { dbConnect } from "../../../lib/mongodb";
 import { AppDispatch } from "../../../store";
-import { updateRoutine, deleteRoutine } from "../../../store/routineSlice";
+import { updateRoutine, deleteRoutine, ThunkError } from "../../../store/routineSlice";
 import RoutineModel from "../../../models/Routine";
 import DayModel, { IDay } from "../../../models/Day";
 import ExerciseModel, { IExercise } from "../../../models/Exercise";
@@ -234,8 +234,13 @@ export default function RoutineEditPage({ routine: initialRoutine }: RoutineEdit
       ).unwrap();
       router.push("/app/routine");
     } catch (err) {
-      setError("Error al guardar la rutina");
-      console.error(err);
+      const error = err as ThunkError;
+      if (error.message === "Unauthorized" && error.status === 401) {
+        router.push("/login");
+      } else {
+        setError("Error al guardar la rutina");
+        console.error(err);
+      }
     } finally {
       setSavingRoutine(false);
     }
@@ -247,8 +252,13 @@ export default function RoutineEditPage({ routine: initialRoutine }: RoutineEdit
     try {
       await dispatch(deleteRoutine(initialRoutine._id)).unwrap();
       router.push("/app/routine");
-    } catch {
-      setError("Error al eliminar la rutina");
+    } catch(err) {
+      const error = err as ThunkError;
+      if (error.message === "Unauthorized" && error.status === 401) {
+        router.push("/login");
+      } else {
+        setError("Error al eliminar la rutina");
+      }
     } finally {
       setDeletingRoutine(false);
     }

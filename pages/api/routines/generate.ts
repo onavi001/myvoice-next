@@ -22,6 +22,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (!level || !goal || !days || !equipment) {
             return res.status(400).json({ error: "Faltan parámetros requeridos" });
         }
+        console.log(req.headers.authorization)
+        if (!req.headers.authorization) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
         const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
         if (!token) return res.status(401).json({ message: "No autenticado" });
         
@@ -95,12 +99,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
         if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
         const data = await response.json();
-        console.log(data.choices[0].message.content);
         let content = data.choices[0]?.message.content.trim();
         if (content.startsWith("```json")) content = content.slice(7, -3).trim();
         const routineData: RoutineData = JSON.parse(content);
         res.status(200).json(routineData);
     } catch (error) {
+        console.log(error)
         console.error("Error al generar rutina:", error);
         res.status(500).json({ error: "Error interno del servidor" });
     }

@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { useSelector, useDispatch } from "react-redux";
 import { AppDispatch, RootState } from "../../store";
 import { addProgress, editProgress, deleteProgress, clearProgress, fetchProgress } from "../../store/progressSlice";
-import { fetchRoutines } from "../../store/routineSlice";
+import { fetchRoutines, ThunkError } from "../../store/routineSlice";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import Card from "../../components/Card";
@@ -91,8 +91,13 @@ export default function ProgressPage({
     try {
       await dispatch(clearProgress()).unwrap();
       setToastMessage("Progreso limpiado correctamente");
-    } catch {
-      setToastMessage("Error al limpiar el progreso");
+    } catch(err) {
+      const error = err as ThunkError;
+      if (error.message === "Unauthorized" && error.status === 401) {
+        router.push("/login");
+      } else {
+        setToastMessage("Error al limpiar el progreso");
+      }
     } finally {
       setClearingProgress(false);
     }
@@ -123,8 +128,13 @@ export default function ProgressPage({
         delete newData[progressId.toString()];
         return newData;
       });
-    } catch {
-      setToastMessage("Error al actualizar el progreso");
+    } catch(err) {
+      const error = err as ThunkError;
+      if (error.message === "Unauthorized" && error.status === 401) {
+        router.push("/login");
+      } else {
+        setToastMessage("Error al actualizar el progreso");
+      }
     } finally {
       setSavingProgress((prev) => ({ ...prev, [progressId.toString()]: false }));
     }
@@ -136,8 +146,13 @@ export default function ProgressPage({
       await dispatch(deleteProgress(progressId)).unwrap();
       setToastMessage("Progreso eliminado correctamente");
       setExpandedCardKey(null);
-    } catch {
-      setToastMessage("Error al eliminar el progreso");
+    } catch(err) {
+      const error = err as ThunkError;
+      if (error.message === "Unauthorized" && error.status === 401) {
+        router.push("/login");
+      } else {
+        setToastMessage("Error al eliminar el progreso");
+      }
     } finally {
       setDeletingProgress((prev) => ({ ...prev, [progressId.toString()]: false }));
     }
@@ -173,8 +188,13 @@ export default function ProgressPage({
         notes: "",
         date: new Date(),
       });
-    } catch {
-      setToastMessage("Error al agregar el progreso");
+    } catch(err) {
+      const error = err as ThunkError;
+      if (error.message === "Unauthorized" && error.status === 401) {
+        router.push("/login");
+      } else {
+        setToastMessage("Error al agregar el progreso");
+      }
     } finally {
       setAddingProgress(false);
     }
