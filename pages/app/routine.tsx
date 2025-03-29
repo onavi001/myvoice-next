@@ -365,9 +365,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
             <div className="flex items-center">
               <span className="text-[#B0B0B0] font-semibold text-xs min-w-[100px]">🏋️ Músculos:</span>
               <ul className="list-disc pl-3 text-[#FFFFFF] text-xs max-w-full">
-                {selectedDay.musclesWorked.map((muscle, index) => (
-                  <li key={index}>{muscle}</li>
-                ))}
+                <li>{selectedDay.musclesWorked.join(", ")}</li>
               </ul>
             </div>
             <div className="flex items-center">
@@ -422,7 +420,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                     </button>
                     {isExpanded && (
                       <div className="p-2 bg-[#4A4A4A] text-xs space-y-2">
-                        <div className="grid grid-cols-2 gap-1">
+                        <div className="grid grid-cols-3 gap-1">
                           <div>
                             <span className="text-[#B0B0B0] font-semibold">Músculo:</span>
                             <p className="text-[#FFFFFF]">{currentExercise.muscleGroup.join(", ")}</p>
@@ -437,6 +435,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                               </ul>
                             </div>
                           )}
+                          
                         </div>
                         {currentExercise.videos && currentExercise.videos.length > 0 ? (
                           <div>
@@ -618,7 +617,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                     </button>
                     {isExpanded && (
                       <div className="p-2 bg-[#4A4A4A] text-xs space-y-2">
-                        <div className="grid grid-cols-2 gap-1">
+                        <div className="grid grid-cols-3 gap-1">
                           <div>
                             <span className="text-[#B0B0B0] font-semibold">Músculo:</span>
                             <p className="text-[#FFFFFF]">{currentExercise.muscleGroup.join(", ")}</p>
@@ -633,6 +632,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                               </ul>
                             </div>
                           )}
+                          <div>Cambiar ejercicio</div>
                         </div>
                         {currentExercise.videos && currentExercise.videos.length > 0 ? (
                           <div>

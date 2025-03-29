@@ -272,6 +272,22 @@ export default function RoutineAIPage() {
         </>
       ) : (
         <div className="mt-8 max-w-md mx-auto">
+          <div className="flex space-x-2">
+            <Button
+              onClick={handleSaveRoutine}
+              disabled={savingRoutine}
+              className="w-full bg-[#34C759] text-black p-2 rounded-md disabled:bg-[#34C759] disabled:opacity-50 mt-4 text-xs font-semibold hover:bg-[#2ca44e] border border-[#34C759] shadow-md"
+            >
+              {savingRoutine ? <><FuturisticLoader />Guardar Rutina</> : "Guardar Rutina"}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {setCurrentRoutine(null); setInitialFlag(true);}}
+              className="mt-4 w-1/2 bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md disabled:bg-[#D32F2F] disabled:opacity-50"
+            >
+              Generar nueva rutina
+            </Button>
+          </div>
           <h2 className="text-xl font-semibold text-[#34C759]">{currentRoutine.name}</h2>
           {currentRoutine.days.map((day) => (
             <Card
@@ -291,13 +307,22 @@ export default function RoutineAIPage() {
               </ul>
             </Card>
           ))}
-          <Button
-            onClick={handleSaveRoutine}
-            disabled={savingRoutine}
-            className="w-full bg-[#34C759] text-black p-2 rounded-md disabled:bg-[#34C759] disabled:opacity-50 mt-4 text-xs font-semibold hover:bg-[#2ca44e] border border-[#34C759] shadow-md"
-          >
-            {savingRoutine ? <><FuturisticLoader />Guardar Rutina</> : "Guardar Rutina"}
-          </Button>
+          <div className="flex space-x-2">
+            <Button
+              onClick={handleSaveRoutine}
+              disabled={savingRoutine}
+              className="w-full bg-[#34C759] text-black p-2 rounded-md disabled:bg-[#34C759] disabled:opacity-50 mt-4 text-xs font-semibold hover:bg-[#2ca44e] border border-[#34C759] shadow-md"
+            >
+              {savingRoutine ? <><FuturisticLoader />Guardar Rutina</> : "Guardar Rutina"}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {setCurrentRoutine(null); setInitialFlag(true);}}
+              className="mt-4 w-1/2 bg-[#EF5350] text-white hover:bg-[#D32F2F] rounded-md py-1 px-2 text-xs font-semibold border border-[#D32F2F] shadow-md disabled:bg-[#D32F2F] disabled:opacity-50"
+            >
+              Generar nueva rutina
+            </Button>
+          </div>
         </div>
       )}
 
