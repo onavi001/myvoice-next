@@ -119,7 +119,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
             Devuelve solo el objeto JSON, sin texto adicional fuera del JSON.
         `;
-        console.log(prompt)
         // Llamada a la API de Groq
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",

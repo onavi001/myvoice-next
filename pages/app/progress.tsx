@@ -44,35 +44,21 @@ export default function ProgressPage({
   const [editData, setEditData] = useState<Record<string, Partial<ProgressData>>>({});
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
   const [newProgress, setNewProgress] = useState<Omit<ProgressData, "_id" | "userId">>({
-    routineId: "",
-    dayIndex: 0,
-    exerciseIndex: 0,
+    name: "",
     sets: 0,
     reps: 0,
-    weightUnit: "kg",
     repsUnit: "count",
+    weightUnit: "kg",
     weight: "",
     notes: "",
     date: new Date(),
   });
-  const [addingProgress, setAddingProgress] = useState(false); // Loader para agregar progreso
-  const [savingProgress, setSavingProgress] = useState<Record<string, boolean>>({}); // Loader para guardar edición
-  const [deletingProgress, setDeletingProgress] = useState<Record<string, boolean>>({}); // Loader para eliminar progreso
-  const [clearingProgress, setClearingProgress] = useState(false); // Loader para limpiar progreso
-  const [fetchingInitialData, setFetchingInitialData] = useState(true); // Loader para datos iniciales
+  const [addingProgress, setAddingProgress] = useState(false);
+  const [savingProgress, setSavingProgress] = useState<Record<string, boolean>>({});
+  const [deletingProgress, setDeletingProgress] = useState<Record<string, boolean>>({});
+  const [clearingProgress, setClearingProgress] = useState(false);
+  const [fetchingInitialData, setFetchingInitialData] = useState(true);
   const itemsPerPage = 10;
-
-  // Actualizar routineId cuando routines o initialRoutines estén disponibles
-  useEffect(() => {
-    const firstRoutineId =
-      routines[0]?._id.toString() || initialRoutines[0]?._id.toString() || "";
-    if (firstRoutineId && newProgress.routineId !== firstRoutineId) {
-      setNewProgress((prev) => ({
-        ...prev,
-        routineId: firstRoutineId,
-      }));
-    }
-  }, [routines, initialRoutines]);
 
   useEffect(() => {
     if (user && !routines.length && !routineLoading) {
@@ -81,7 +67,7 @@ export default function ProgressPage({
     if (user && !progress.length && !progressLoading) {
       dispatch(fetchProgress.fulfilled(initialProgress, "", undefined));
     }
-    setFetchingInitialData(false); // Datos iniciales cargados
+    setFetchingInitialData(false);
   }, [dispatch, user, initialRoutines, initialProgress, routineLoading, progressLoading]);
 
   const handleBack = () => router.push("/app/routine");
@@ -91,7 +77,7 @@ export default function ProgressPage({
     try {
       await dispatch(clearProgress()).unwrap();
       setToastMessage("Progreso limpiado correctamente");
-    } catch(err) {
+    } catch (err) {
       const error = err as ThunkError;
       if (error.message === "Unauthorized" && error.status === 401) {
         router.push("/login");
@@ -128,7 +114,7 @@ export default function ProgressPage({
         delete newData[progressId.toString()];
         return newData;
       });
-    } catch(err) {
+    } catch (err) {
       const error = err as ThunkError;
       if (error.message === "Unauthorized" && error.status === 401) {
         router.push("/login");
@@ -146,7 +132,7 @@ export default function ProgressPage({
       await dispatch(deleteProgress(progressId)).unwrap();
       setToastMessage("Progreso eliminado correctamente");
       setExpandedCardKey(null);
-    } catch(err) {
+    } catch (err) {
       const error = err as ThunkError;
       if (error.message === "Unauthorized" && error.status === 401) {
         router.push("/login");
@@ -167,8 +153,8 @@ export default function ProgressPage({
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProgress.routineId) {
-      setToastMessage("Por favor, selecciona una rutina válida.");
+    if (!newProgress.name) {
+      setToastMessage("El nombre del ejercicio es obligatorio.");
       return;
     }
     setAddingProgress(true);
@@ -177,18 +163,16 @@ export default function ProgressPage({
       setToastMessage("Progreso agregado correctamente");
       setShowAddForm(false);
       setNewProgress({
-        routineId: routines[0]?._id.toString() || initialRoutines[0]?._id.toString() || "",
-        dayIndex: 0,
-        exerciseIndex: 0,
+        name: "",
         sets: 0,
         reps: 0,
-        weightUnit: "kg",
         repsUnit: "count",
+        weightUnit: "kg",
         weight: "",
         notes: "",
         date: new Date(),
       });
-    } catch(err) {
+    } catch (err) {
       const error = err as ThunkError;
       if (error.message === "Unauthorized" && error.status === 401) {
         router.push("/login");
@@ -201,16 +185,10 @@ export default function ProgressPage({
   };
 
   const filteredProgress = progress.filter((entry) => {
-    const routine = routines.find((r) => r._id.toString() === entry.routineId);
-    const day = routine?.days[entry.dayIndex];
-    const exercise = day?.exercises[entry.exerciseIndex];
     const query = searchQuery.toLowerCase();
     return (
       !query ||
-      routine?.name.toLowerCase().includes(query) ||
-      day?.dayName.toLowerCase().includes(query) ||
-      exercise?.name.toLowerCase().includes(query) ||
-      exercise?.muscleGroup.join(", ")?.toLowerCase().includes(query)
+      entry.name.toLowerCase().includes(query)
     );
   });
 
@@ -224,7 +202,7 @@ export default function ProgressPage({
     labels: filteredProgress.map((entry) => new Date(entry.date).toLocaleDateString()),
     datasets: [
       {
-        label: "Peso (kg)",
+        label: "Peso",
         data: filteredProgress.map((entry) => parseFloat(entry.weight) || 0),
         borderColor: "#34C759",
         backgroundColor: "rgba(52, 199, 89, 0.2)",
@@ -255,17 +233,6 @@ export default function ProgressPage({
     );
   }
 
-  if (!routines.length && !initialRoutines.length) {
-    return (
-      <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col items-center justify-center">
-        <p className="text-[#D1D1D1] text-xs mb-4">No hay rutinas disponibles para mostrar progreso.</p>
-        <Button onClick={handleBack} className="bg-[#42A5F5] text-black p-2 rounded-full shadow-md hover:bg-[#1E88E5]">
-          Volver a Rutinas
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
       <style>{`.scrollbar-hidden::-webkit-scrollbar { display: none; } .scrollbar-hidden { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
@@ -275,7 +242,7 @@ export default function ProgressPage({
           <Input
             name="search"
             type="text"
-            placeholder="Buscar (músculo, ejercicio...)"
+            placeholder="Buscar ejercicio..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white placeholder-[#B0B0B0] rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
@@ -314,9 +281,6 @@ export default function ProgressPage({
             <>
               <ul className="space-y-2">
                 {paginatedProgress.map((entry) => {
-                  const routine = routines.find((r) => r._id.toString() === entry.routineId);
-                  const day = routine?.days[entry.dayIndex];
-                  const exercise = day?.exercises[entry.exerciseIndex];
                   const cardKey = entry._id;
                   const isExpanded = expandedCardKey === cardKey.toString();
                   const edited = editData[cardKey.toString()] || {};
@@ -334,18 +298,12 @@ export default function ProgressPage({
                         onClick={() => toggleExpandCard(cardKey.toString())}
                       >
                         <span className="text-xs font-semibold text-white truncate">
-                          {exercise?.name || "Ejercicio desconocido"}
+                          {currentEntry.name}
                         </span>
                         <span className="text-[#D1D1D1] text-xs">{isExpanded ? "▲" : "▼"}</span>
                       </div>
                       {isExpanded && (
                         <div className="p-2 bg-[#2D2D2D] text-xs space-y-2">
-                          <p className="text-[#D1D1D1]">
-                            {routine?.name || "Rutina desconocida"} - {day?.dayName || "Día desconocido"}
-                          </p>
-                          <p className="text-[#B0B0B0]">
-                            Músculo: {exercise?.muscleGroup?.join(", ") || "Desconocido"}
-                          </p>
                           <div className="grid grid-cols-2 gap-2">
                             <div>
                               <label className="text-[#D1D1D1] text-xs font-medium">Fecha:</label>
@@ -481,50 +439,15 @@ export default function ProgressPage({
             <h3 className="text-sm font-bold text-[#34C759] mb-2">Agregar Progreso</h3>
             <form onSubmit={handleAddSubmit} className="space-y-2">
               <div>
-                <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Rutina:</label>
-                <select
-                  value={newProgress.routineId}
-                  onChange={(e) => handleAddChange("routineId", e.target.value)}
-                  className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                >
-                  {routines.map((routine) => (
-                    <option key={routine._id.toString()} value={routine._id.toString()}>
-                      {routine.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Día:</label>
-                <select
-                  value={newProgress.dayIndex}
-                  onChange={(e) => handleAddChange("dayIndex", Number(e.target.value))}
-                  className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                >
-                  {routines
-                    .find((r) => r._id.toString() === newProgress.routineId)
-                    ?.days.map((day, idx) => (
-                      <option key={idx} value={idx}>
-                        {day.dayName || `Día ${idx + 1}`}
-                      </option>
-                    ))}
-                </select>
-              </div>
-              <div>
                 <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Ejercicio:</label>
-                <select
-                  value={newProgress.exerciseIndex}
-                  onChange={(e) => handleAddChange("exerciseIndex", Number(e.target.value))}
+                <Input
+                  name="name"
+                  type="text"
+                  value={newProgress.name}
+                  onChange={(e) => handleAddChange("name", e.target.value)}
                   className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white rounded-md p-2 text-xs focus:ring-1 focus:ring-[#34C759] focus:border-transparent"
-                >
-                  {routines
-                    .find((r) => r._id.toString() === newProgress.routineId)
-                    ?.days[newProgress.dayIndex]?.exercises.map((exercise, idx) => (
-                      <option key={idx} value={idx}>
-                        {exercise.name || `Ejercicio ${idx + 1}`}
-                      </option>
-                    ))}
-                </select>
+                  placeholder="Nombre del ejercicio"
+                />
               </div>
               <div>
                 <label className="block text-[#D1D1D1] text-xs font-medium mb-1">Series:</label>
@@ -702,9 +625,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const serializedProgress = progress.map((p) => ({
       _id: p._id.toString(),
       userId: p.userId.toString(),
-      routineId: p.routineId.toString(),
-      dayIndex: p.dayIndex,
-      exerciseIndex: p.exerciseIndex,
+      name: p.name,
       sets: p.sets || 0,
       reps: p.reps || 0,
       repsUnit: p.repsUnit || "count",

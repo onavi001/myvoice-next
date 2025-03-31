@@ -27,6 +27,7 @@ import ExerciseModel from "../../models/Exercise";
 import VideoModel, { IVideo } from "../../models/Video";
 import Loader, { SmallLoader } from "../../components/Loader";
 import { Types } from "mongoose";
+import { ArrowPathIcon } from "@heroicons/react/16/solid";
 
 export default function RoutinePage({ initialRoutines }: { initialRoutines: RoutineData[] }) {
   console.log(initialRoutines);
@@ -144,9 +145,10 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
           const currentExercise = routines[selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex];
           await dispatch(
             addProgress({
-              routineId: routines[selectedRoutineIndex]._id.toString(),
-              dayIndex,
-              exerciseIndex,
+              //routineId: routines[selectedRoutineIndex]._id.toString(),
+              //dayIndex,
+              //exerciseIndex,
+              name: currentExercise.name,
               sets: Number(updatedExercise.sets ?? currentExercise.sets),
               reps: Number(updatedExercise.reps ?? currentExercise.reps),
               repsUnit: updatedExercise.repsUnit ?? currentExercise.repsUnit,
@@ -189,6 +191,46 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
       }
     }
   };
+
+  const handleNewExercise = async(dayIndex: number, exerciseIndex: number) => {
+    if (selectedRoutineIndex !== null && user) {
+      const exercise = routines[selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex];
+      try {
+        const response = await fetch("/api/exercises/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            dayExercises: routines[selectedRoutineIndex].days[dayIndex].exercises,
+            exerciseToChangeId: exercise._id,
+          }),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          console.log("New exercise generated:", data);
+          /*
+          await dispatch(
+            updateExercise({
+              routineId: routines[selectedRoutineIndex]._id,
+              dayId: routines[selectedRoutineIndex].days[dayIndex]._id,
+              exerciseId: exercise._id,
+              exerciseData: data,
+            })
+          ).unwrap();
+          */
+        } else {
+          console.error("Error generating new exercise:", data);
+        }
+      } catch (err) {
+        const error = err as ThunkError;
+        if (error.message === "Unauthorized" && error.status === 401) {
+          router.push("/login");
+        } else {
+          console.error("Error generating new exercise:", error);
+        }
+      }
+    }
+    console.log(dayIndex, exerciseIndex);
+  }
 
   const handleVideoAction = async (
     action: "next" | "prev" | "toggle",
@@ -617,7 +659,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                     </button>
                     {isExpanded && (
                       <div className="p-2 bg-[#4A4A4A] text-xs space-y-2">
-                        <div className="grid grid-cols-3 gap-1">
+                        <div className="grid grid-cols-2 gap-1">
                           <div>
                             <span className="text-[#B0B0B0] font-semibold">Músculo:</span>
                             <p className="text-[#FFFFFF]">{currentExercise.muscleGroup.join(", ")}</p>
@@ -632,8 +674,15 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                               </ul>
                             </div>
                           )}
-                          <div>Cambiar ejercicio</div>
                         </div>
+                          <Button
+                            onClick={() => handleNewExercise(selectedDayIndex, globalIndex)}
+                            disabled={loading}
+                            className="flex items-center gap-1 bg-[#34C759] text-black px-2 py-1 rounded-full text-xs hover:bg-[#2ca44e] disabled:opacity-50"
+                          >
+                            <ArrowPathIcon className="w-4 h-4" />
+                            <span>Regenerar</span>
+                          </Button>
                         {currentExercise.videos && currentExercise.videos.length > 0 ? (
                           <div>
                             {areVideosVisible && (

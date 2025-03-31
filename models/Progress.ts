@@ -2,9 +2,7 @@ import { Schema, model, Model, Types } from "mongoose";
 
 export interface IProgress {
   userId: Schema.Types.ObjectId;
-  routineId: Schema.Types.ObjectId;
-  dayIndex: number;
-  exerciseIndex: number;
+  name: string;
   sets: number;
   reps: number;
   repsUnit: "count" | "seconds";
@@ -15,10 +13,8 @@ export interface IProgress {
 }
 export interface ProgressData {
   _id: Types.ObjectId;
-  userId: string; // Serializado desde Schema.Types.ObjectId
-  routineId: string; // Serializado desde Schema.Types.ObjectId
-  dayIndex: number;
-  exerciseIndex: number;
+  userId: string;
+  name: string;
   sets: number;
   reps: number;
   repsUnit: "count" | "seconds";
@@ -30,9 +26,7 @@ export interface ProgressData {
 
 const ProgressSchema: Schema = new Schema<IProgress>({
   userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-  routineId: { type: Schema.Types.ObjectId, ref: "Routine", required: true },
-  dayIndex: { type: Number, required: true },
-  exerciseIndex: { type: Number, required: true },
+  name: { type: String, required: true },
   sets: { type: Number, required: true },
   reps: { type: Number, required: true },
   repsUnit: { type: String, enum: ["count", "seconds"], default : "count" },

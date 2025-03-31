@@ -9,7 +9,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const Button: React.FC<ButtonProps> = ({ children, onClick, variant = "primary", disabled, className = "", ...props }) => {
-  const baseStyles = "w-full py-2 rounded text-xs font-medium transition-colors";
+  const baseStyles = " py-2 rounded text-xs font-medium transition-colors";
   const variantStyles = {
     primary: "bg-[#34C759] text-black hover:bg-[#2DBF4E]",
     secondary: "bg-white text-black hover:bg-[#E0E0E0]",
@@ -20,7 +20,7 @@ const Button: React.FC<ButtonProps> = ({ children, onClick, variant = "primary",
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`${baseStyles} ${variantStyles[variant]} ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${className}`}
+      className={`${variantStyles[variant]} ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${className} ${baseStyles}`}
       {...props}
     >
       {children}
