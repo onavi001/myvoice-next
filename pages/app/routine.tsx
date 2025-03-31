@@ -31,7 +31,6 @@ import { ArrowPathIcon } from "@heroicons/react/16/solid";
 import Modal from "../../components/Modal";
 
 export default function RoutinePage({ initialRoutines }: { initialRoutines: RoutineData[] }) {
-  console.log(initialRoutines);
   const dispatch = useDispatch<AppDispatch>();
   const { routines, selectedRoutineIndex, loading, error } = useSelector((state: RootState) => state.routine);
   const { user, loading: userLoading } = useSelector((state: RootState) => state.user);
@@ -42,9 +41,15 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
   const [editData, setEditData] = useState<Record<string, Partial<IExercise>>>({});
   const [loadingVideos, setLoadingVideos] = useState<Record<number, boolean>>({});
   const [videosVisible, setVideosVisible] = useState<Record<number, boolean>>({});
-  const [savingProgress, setSavingProgress] = useState<Record<string, boolean>>({}); // Loader para guardar progreso
-  const [togglingCompleted, setTogglingCompleted] = useState<Record<number, boolean>>({}); // Loader para completar ejercicios
-  const [switchingVideos, setSwitchingVideos] = useState<Record<number, boolean>>({}); // Loader para cambiar videos
+  const [savingProgress, setSavingProgress] = useState<Record<string, boolean>>({});
+  const [togglingCompleted, setTogglingCompleted] = useState<Record<number, boolean>>({});
+  const [switchingVideos, setSwitchingVideos] = useState<Record<number, boolean>>({});
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [generatedExercises, setGeneratedExercises] = useState<Partial<IExercise & { videoUrl: string }>[]>([]);
+  const [loadingGeneratedExercise, setLoadingGeneratedExercise] = useState(false);
+  const [expandedVideos, setExpandedVideos] = useState<Record<number, boolean>>({});
+  const [currentDayIndex, setCurrentDayIndex] = useState<number | null>(null);
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState<number | null>(null);
 
   const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || "TU_CLAVE_API_YOUTUBE";
 
@@ -53,9 +58,9 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
       const dayIndex = localStorage.getItem("dayIndex");
       setSelectedDayIndex(dayIndex ? parseInt(dayIndex) : 0);
       const routineIndex = localStorage.getItem("routineIndex");
-      dispatch(selectRoutine(routineIndex ? parseInt(routineIndex) : 0)); 
+      dispatch(selectRoutine(routineIndex ? parseInt(routineIndex) : 0));
     }
-  }, [dispatch,routines]);
+  }, [dispatch, routines]);
 
   useEffect(() => {
     if (initialRoutines && routines.length === 0) {
@@ -72,9 +77,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
     exerciseIndex: number
   ) => {
     const exercise = routines[routineIndex]?.days[dayIndex]?.exercises[exerciseIndex];
-    if (exercise?.videos?.length > 0) {
-      return;
-    }
+    if (exercise?.videos?.length > 0) return;
 
     setLoadingVideos((prev) => ({ ...prev, [exerciseIndex]: true }));
     try {
@@ -146,9 +149,6 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
           const currentExercise = routines[selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex];
           await dispatch(
             addProgress({
-              //routineId: routines[selectedRoutineIndex]._id.toString(),
-              //dayIndex,
-              //exerciseIndex,
               name: currentExercise.name,
               sets: Number(updatedExercise.sets ?? currentExercise.sets),
               reps: Number(updatedExercise.reps ?? currentExercise.reps),
@@ -193,19 +193,14 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
     }
   };
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [generatedExercises, setGeneratedExercises] = useState<Partial<IExercise&{videoUrl:string}>[]>([]);
-  const [loadingGeneratedExercise, setLoadingGeneratedExercise] = useState(false);
-  const [expandedVideos, setExpandedVideos] = useState<Record<number, boolean>>({});
-  const [currentDayIndex, setCurrentDayIndex] = useState<number | null>(null); // Guardar el día actual
-  const [currentExerciseIndex, setCurrentExerciseIndex] = useState<number | null>(null); // Guardar el ejercicio actual
   const toggleVideoExpansion = (index: number) => {
     setExpandedVideos((prev) => ({
       ...prev,
       [index]: !prev[index],
     }));
   };
-  const handleNewExercise = async(dayIndex: number, exerciseIndex: number) => {
+
+  const handleNewExercise = async (dayIndex: number, exerciseIndex: number) => {
     if (selectedRoutineIndex === null || !user) {
       console.error("No hay rutina seleccionada o usuario no autenticado");
       return;
@@ -215,12 +210,13 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
     setLoadingGeneratedExercise(true);
     setCurrentDayIndex(dayIndex);
     setCurrentExerciseIndex(exerciseIndex);
+
     try {
       const response = await fetch("/api/exercises/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          dayExercises: routines[selectedRoutineIndex].days[dayIndex].exercises,
+          dayExercises: routine.days[dayIndex].exercises,
           exerciseToChangeId: exercise._id,
         }),
       });
@@ -230,7 +226,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
         return;
       }
       console.log("New exercises generated:", data);
-      setGeneratedExercises(data);
+      setGeneratedExercises(data); // Espera un array de 5 ejercicios
       setIsModalOpen(true);
       setExpandedVideos({});
     } catch (err) {
@@ -243,9 +239,9 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
     } finally {
       setLoadingGeneratedExercise(false);
     }
-  }
+  };
 
-  const handleSelectExercise = async (selectedExercise: Partial<IExercise>) => {
+  const handleSelectExercise = async (selectedExercise: Partial<IExercise & { videoUrl: string }>) => {
     if (!user || selectedRoutineIndex === null || currentDayIndex === null || currentExerciseIndex === null) return;
 
     const routine = routines[selectedRoutineIndex];
@@ -258,9 +254,18 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
           routineId: routine._id,
           dayId,
           exerciseId,
-          exerciseData: selectedExercise as Partial<RoutineData["days"][number]["exercises"][number]>,
+          exerciseData: {
+            name: selectedExercise.name,
+            sets: selectedExercise.sets,
+            reps: selectedExercise.reps,
+            repsUnit: selectedExercise.repsUnit,
+            weightUnit: selectedExercise.weightUnit,
+            weight: selectedExercise.weight,
+          },
         })
       ).unwrap();
+      console.log("Ejercicio actualizado:", selectedExercise);
+
       setIsModalOpen(false);
       setGeneratedExercises([]);
       setExpandedVideos({});
@@ -271,7 +276,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
       if (error.message === "Unauthorized" && error.status === 401) {
         router.push("/login");
       } else {
-        console.error("Error guardando el progreso:", error);
+        console.error("Error actualizando el ejercicio:", error);
       }
     }
   };
@@ -333,11 +338,11 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
         ).unwrap();
       } catch (err) {
         const error = err as ThunkError;
-          if (error.message === "Unauthorized" && error.status === 401) {
-            router.push("/login");
-          } else {
-            console.error("Error toggling completed:", error);
-          }
+        if (error.message === "Unauthorized" && error.status === 401) {
+          router.push("/login");
+        } else {
+          console.error("Error toggling completed:", error);
+        }
       } finally {
         setTogglingCompleted((prev) => ({ ...prev, [exerciseIndex]: false }));
       }
@@ -371,8 +376,9 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
 
     return { circuits, standalone };
   };
-  if (!loadingGeneratedExercise) return <FuturisticLoader/> 
-  if (userLoading || loading || loadingGeneratedExercise) return <Loader />;
+
+  if (userLoading || loading ) return <Loader />;
+  if (loadingGeneratedExercise) return <FuturisticLoader />;
   if (error) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Error: {error}</div>;
 
   if (routines.length === 0) {
@@ -408,7 +414,6 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
 
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
-      
       <div className="p-4 max-w-full mx-auto flex-1">
         <div className="flex overflow-x-auto space-x-2 mb-4 scrollbar-hidden">
           {routines.map((routine, index) => (
@@ -513,7 +518,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                             <p className="text-[#FFFFFF]">{currentExercise.muscleGroup.join(", ")}</p>
                             <Button
                               onClick={() => handleNewExercise(selectedDayIndex, globalIndex)}
-                              disabled={loading}
+                              disabled={loadingGeneratedExercise}
                               className="my-4 flex items-center gap-1 bg-[#34C759] text-black px-2 py-1 rounded-full text-xs hover:bg-[#2ca44e] disabled:opacity-50"
                             >
                               <ArrowPathIcon className="w-4 h-4" />
@@ -530,7 +535,6 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                               </ul>
                             </div>
                           )}
-                          
                         </div>
                         {currentExercise.videos && currentExercise.videos.length > 0 ? (
                           <div>
@@ -718,7 +722,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                             <p className="text-[#FFFFFF]">{currentExercise.muscleGroup.join(", ")}</p>
                             <Button
                               onClick={() => handleNewExercise(selectedDayIndex, globalIndex)}
-                              disabled={loading}
+                              disabled={loadingGeneratedExercise}
                               className="my-4 flex items-center gap-1 bg-[#34C759] text-black px-2 py-1 rounded-full text-xs hover:bg-[#2ca44e] disabled:opacity-50"
                             >
                               <ArrowPathIcon className="w-4 h-4" />
@@ -881,49 +885,51 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
           </p>
         )}
       </div>
+
       {/* Modal para mostrar los 5 ejercicios */}
-      {/* Modal con videos expandibles/retraíbles */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
         <h3 className="text-sm font-bold text-[#34C759] mb-2">Selecciona un nuevo ejercicio</h3>
-        <ul className="space-y-4">
-          {generatedExercises.map((exercise, index) => {
-            const isExpanded = expandedVideos[index] || false;
+        <div className="max-h-[400px] overflow-y-auto scrollbar-hidden">
+          <ul className="space-y-4">
+            {generatedExercises.map((exercise, index) => {
+              const isExpanded = expandedVideos[index] || false;
 
-            return (
-              <li key={index} className="p-2 bg-[#2D2D2D] rounded-md">
-                <div className="cursor-pointer hover:bg-[#3A3A3A] p-2 rounded-md">
-                  <div className="flex justify-between items-center" onClick={() => toggleVideoExpansion(index)}>
-                    <span className="text-xs text-white">
-                      {exercise.name} - {exercise.sets}x{exercise.reps}{" "}
-                      {exercise.weight ? `(${exercise.weight} ${exercise.weightUnit})` : ""}
-                    </span>
-                    <span className="text-[#D1D1D1] text-xs">{isExpanded ? "▲" : "▼"}</span>
+              return (
+                <li key={index} className="p-2 bg-[#2D2D2D] rounded-md">
+                  <div className="cursor-pointer hover:bg-[#3A3A3A] p-2 rounded-md">
+                    <div className="flex justify-between items-center" onClick={() => toggleVideoExpansion(index)}>
+                      <span className="text-xs text-white">
+                        {exercise.name} - {exercise.sets}x{exercise.reps}{" "}
+                        {exercise.weight ? `(${exercise.weight} ${exercise.weightUnit})` : ""}
+                      </span>
+                      <span className="text-[#D1D1D1] text-xs">{isExpanded ? "▲" : "▼"}</span>
+                    </div>
+                    {isExpanded && (
+                      <div className="mt-2">
+                        <iframe
+                          width="100%"
+                          height="150"
+                          src={exercise.videoUrl}
+                          title={exercise.name}
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          className="rounded-md"
+                        />
+                      </div>
+                    )}
                   </div>
-                  {isExpanded && (
-                    <div className="mt-2">
-                      <iframe
-                      width="100%"
-                      height="150"
-                      src={exercise.videoUrl}
-                      title={exercise.name}
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      className="rounded-md"
-                    />
-                  </div>
-                  )}
-                </div>
-                <Button
-                  onClick={() => handleSelectExercise(exercise)}
-                  className="mt-2 w-full bg-[#34C759] text-black px-2 py-1 rounded-md text-xs hover:bg-[#2ca44e]"
-                >
-                  Seleccionar
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
+                  <Button
+                    onClick={() => handleSelectExercise(exercise)}
+                    className="mt-2 w-full bg-[#34C759] text-black px-2 py-1 rounded-md text-xs hover:bg-[#2ca44e]"
+                  >
+                    Seleccionar
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </Modal>
     </div>
   );
@@ -940,19 +946,19 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "my-super-secret-key") as { userId: string };
 
     const routines = await RoutineModel.find({ userId: decoded.userId })
-    .populate({
-      path: "days",
-      model: DayModel,
-      populate: {
-        path: "exercises",
-        model: ExerciseModel,
+      .populate({
+        path: "days",
+        model: DayModel,
         populate: {
-          path: "videos",
-          model: VideoModel,
+          path: "exercises",
+          model: ExerciseModel,
+          populate: {
+            path: "videos",
+            model: VideoModel,
+          },
         },
-      },
-    })
-    .lean();
+      })
+      .lean();
     const validRoutines = routines.filter((routine) => {
       const hasValidDays = routine.days.length > 0 && routine.days.every((day: Partial<IDay>) => {
         const exercises = day.exercises ?? [];
