@@ -25,9 +25,10 @@ import RoutineModel from "../../models/Routine";
 import DayModel, { IDay } from "../../models/Day";
 import ExerciseModel from "../../models/Exercise";
 import VideoModel, { IVideo } from "../../models/Video";
-import Loader, { SmallLoader } from "../../components/Loader";
+import Loader, { FuturisticLoader, SmallLoader } from "../../components/Loader";
 import { Types } from "mongoose";
 import { ArrowPathIcon } from "@heroicons/react/16/solid";
+import Modal from "../../components/Modal";
 
 export default function RoutinePage({ initialRoutines }: { initialRoutines: RoutineData[] }) {
   console.log(initialRoutines);
@@ -192,45 +193,88 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
     }
   };
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [generatedExercises, setGeneratedExercises] = useState<Partial<IExercise&{videoUrl:string}>[]>([]);
+  const [loadingGeneratedExercise, setLoadingGeneratedExercise] = useState(false);
+  const [expandedVideos, setExpandedVideos] = useState<Record<number, boolean>>({});
+  const [currentDayIndex, setCurrentDayIndex] = useState<number | null>(null); // Guardar el día actual
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState<number | null>(null); // Guardar el ejercicio actual
+  const toggleVideoExpansion = (index: number) => {
+    setExpandedVideos((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  };
   const handleNewExercise = async(dayIndex: number, exerciseIndex: number) => {
-    if (selectedRoutineIndex !== null && user) {
-      const exercise = routines[selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex];
-      try {
-        const response = await fetch("/api/exercises/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            dayExercises: routines[selectedRoutineIndex].days[dayIndex].exercises,
-            exerciseToChangeId: exercise._id,
-          }),
-        });
-        const data = await response.json();
-        if (response.ok) {
-          console.log("New exercise generated:", data);
-          /*
-          await dispatch(
-            updateExercise({
-              routineId: routines[selectedRoutineIndex]._id,
-              dayId: routines[selectedRoutineIndex].days[dayIndex]._id,
-              exerciseId: exercise._id,
-              exerciseData: data,
-            })
-          ).unwrap();
-          */
-        } else {
-          console.error("Error generating new exercise:", data);
-        }
-      } catch (err) {
-        const error = err as ThunkError;
-        if (error.message === "Unauthorized" && error.status === 401) {
-          router.push("/login");
-        } else {
-          console.error("Error generating new exercise:", error);
-        }
+    if (selectedRoutineIndex === null || !user) {
+      console.error("No hay rutina seleccionada o usuario no autenticado");
+      return;
+    }
+    const routine = routines[selectedRoutineIndex];
+    const exercise = routine.days[dayIndex].exercises[exerciseIndex];
+    setLoadingGeneratedExercise(true);
+    setCurrentDayIndex(dayIndex);
+    setCurrentExerciseIndex(exerciseIndex);
+    try {
+      const response = await fetch("/api/exercises/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dayExercises: routines[selectedRoutineIndex].days[dayIndex].exercises,
+          exerciseToChangeId: exercise._id,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        console.error("Error generating new exercises:", data);
+        return;
+      }
+      console.log("New exercises generated:", data);
+      setGeneratedExercises(data);
+      setIsModalOpen(true);
+      setExpandedVideos({});
+    } catch (err) {
+      const error = err as ThunkError;
+      if (error.message === "Unauthorized" && error.status === 401) {
+        router.push("/login");
+      } else {
+        console.error("Error generating new exercise:", error);
+      }
+    } finally {
+      setLoadingGeneratedExercise(false);
+    }
+  }
+
+  const handleSelectExercise = async (selectedExercise: Partial<IExercise>) => {
+    if (!user || selectedRoutineIndex === null || currentDayIndex === null || currentExerciseIndex === null) return;
+
+    const routine = routines[selectedRoutineIndex];
+    const dayId = routine.days[currentDayIndex]._id;
+    const exerciseId = routine.days[currentDayIndex].exercises[currentExerciseIndex]._id;
+
+    try {
+      await dispatch(
+        updateExercise({
+          routineId: routine._id,
+          dayId,
+          exerciseId,
+          exerciseData: selectedExercise as Partial<RoutineData["days"][number]["exercises"][number]>,
+        })
+      ).unwrap();
+      setIsModalOpen(false);
+      setGeneratedExercises([]);
+      setExpandedVideos({});
+      setCurrentDayIndex(null);
+      setCurrentExerciseIndex(null);
+    } catch (err) {
+      const error = err as ThunkError;
+      if (error.message === "Unauthorized" && error.status === 401) {
+        router.push("/login");
+      } else {
+        console.error("Error guardando el progreso:", error);
       }
     }
-    console.log(dayIndex, exerciseIndex);
-  }
+  };
 
   const handleVideoAction = async (
     action: "next" | "prev" | "toggle",
@@ -327,8 +371,8 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
 
     return { circuits, standalone };
   };
-
-  if (userLoading || loading) return <Loader />;
+  if (!loadingGeneratedExercise) return <FuturisticLoader/> 
+  if (userLoading || loading || loadingGeneratedExercise) return <Loader />;
   if (error) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Error: {error}</div>;
 
   if (routines.length === 0) {
@@ -364,6 +408,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
 
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
+      
       <div className="p-4 max-w-full mx-auto flex-1">
         <div className="flex overflow-x-auto space-x-2 mb-4 scrollbar-hidden">
           {routines.map((routine, index) => (
@@ -403,14 +448,14 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
         </div>
         <ProgressBar progress={calculateDayProgress(selectedDay)} label="Progreso Día" />
         <Card className="mb-4 max-h-24 overflow-y-auto scrollbar-hidden">
-          <div className="flex flex-col space-y-1">
-            <div className="flex items-center">
+          <div className="mx-5 grid grid-cols-2 gap-1">
+            <div className="items-center">
               <span className="text-[#B0B0B0] font-semibold text-xs min-w-[100px]">🏋️ Músculos:</span>
               <ul className="list-disc pl-3 text-[#FFFFFF] text-xs max-w-full">
                 <li>{selectedDay.musclesWorked.join(", ")}</li>
               </ul>
             </div>
-            <div className="flex items-center">
+            <div className="items-center">
               <span className="text-[#B0B0B0] font-semibold text-xs min-w-[100px]">🔥 Calentamiento:</span>
               <ul className="list-disc pl-3 text-[#FFFFFF] text-xs max-w-full">
                 {selectedDay.warmupOptions.map((option, index) => (
@@ -462,10 +507,18 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                     </button>
                     {isExpanded && (
                       <div className="p-2 bg-[#4A4A4A] text-xs space-y-2">
-                        <div className="grid grid-cols-3 gap-1">
+                        <div className="grid grid-cols-2 gap-1">
                           <div>
                             <span className="text-[#B0B0B0] font-semibold">Músculo:</span>
                             <p className="text-[#FFFFFF]">{currentExercise.muscleGroup.join(", ")}</p>
+                            <Button
+                              onClick={() => handleNewExercise(selectedDayIndex, globalIndex)}
+                              disabled={loading}
+                              className="my-4 flex items-center gap-1 bg-[#34C759] text-black px-2 py-1 rounded-full text-xs hover:bg-[#2ca44e] disabled:opacity-50"
+                            >
+                              <ArrowPathIcon className="w-4 h-4" />
+                              <span>Regenerar</span>
+                            </Button>
                           </div>
                           {currentExercise.tips && currentExercise.tips.length > 0 && (
                             <div>
@@ -663,6 +716,14 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                           <div>
                             <span className="text-[#B0B0B0] font-semibold">Músculo:</span>
                             <p className="text-[#FFFFFF]">{currentExercise.muscleGroup.join(", ")}</p>
+                            <Button
+                              onClick={() => handleNewExercise(selectedDayIndex, globalIndex)}
+                              disabled={loading}
+                              className="my-4 flex items-center gap-1 bg-[#34C759] text-black px-2 py-1 rounded-full text-xs hover:bg-[#2ca44e] disabled:opacity-50"
+                            >
+                              <ArrowPathIcon className="w-4 h-4" />
+                              <span>Regenerar</span>
+                            </Button>
                           </div>
                           {currentExercise.tips && currentExercise.tips.length > 0 && (
                             <div>
@@ -675,14 +736,6 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                             </div>
                           )}
                         </div>
-                          <Button
-                            onClick={() => handleNewExercise(selectedDayIndex, globalIndex)}
-                            disabled={loading}
-                            className="flex items-center gap-1 bg-[#34C759] text-black px-2 py-1 rounded-full text-xs hover:bg-[#2ca44e] disabled:opacity-50"
-                          >
-                            <ArrowPathIcon className="w-4 h-4" />
-                            <span>Regenerar</span>
-                          </Button>
                         {currentExercise.videos && currentExercise.videos.length > 0 ? (
                           <div>
                             {areVideosVisible && (
@@ -828,6 +881,50 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
           </p>
         )}
       </div>
+      {/* Modal para mostrar los 5 ejercicios */}
+      {/* Modal con videos expandibles/retraíbles */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        <h3 className="text-sm font-bold text-[#34C759] mb-2">Selecciona un nuevo ejercicio</h3>
+        <ul className="space-y-4">
+          {generatedExercises.map((exercise, index) => {
+            const isExpanded = expandedVideos[index] || false;
+
+            return (
+              <li key={index} className="p-2 bg-[#2D2D2D] rounded-md">
+                <div className="cursor-pointer hover:bg-[#3A3A3A] p-2 rounded-md">
+                  <div className="flex justify-between items-center" onClick={() => toggleVideoExpansion(index)}>
+                    <span className="text-xs text-white">
+                      {exercise.name} - {exercise.sets}x{exercise.reps}{" "}
+                      {exercise.weight ? `(${exercise.weight} ${exercise.weightUnit})` : ""}
+                    </span>
+                    <span className="text-[#D1D1D1] text-xs">{isExpanded ? "▲" : "▼"}</span>
+                  </div>
+                  {isExpanded && (
+                    <div className="mt-2">
+                      <iframe
+                      width="100%"
+                      height="150"
+                      src={exercise.videoUrl}
+                      title={exercise.name}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="rounded-md"
+                    />
+                  </div>
+                  )}
+                </div>
+                <Button
+                  onClick={() => handleSelectExercise(exercise)}
+                  className="mt-2 w-full bg-[#34C759] text-black px-2 py-1 rounded-md text-xs hover:bg-[#2ca44e]"
+                >
+                  Seleccionar
+                </Button>
+              </li>
+            );
+          })}
+        </ul>
+      </Modal>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { dbConnect } from "../../../lib/mongodb";
+import { IExercise } from "../../../models/Exercise";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     await dbConnect();
@@ -54,8 +55,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         let content = data.choices[0]?.message.content.trim();
         if (content.startsWith("```json")) content = content.slice(7, -3).trim();
         const newExercise = JSON.parse(content);
+        //videos
+        const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || "TU_CLAVE_API_YOUTUBE";
+        const newExerciseVideos = await Promise.all(
+            newExercise.map(async (exercise: Partial<IExercise>) => {
+                const { name } = exercise;
+                const response = await fetch(
+                    `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(
+                        name + " exercise tutorial"
+                    )}&type=video&key=${YOUTUBE_API_KEY}`
+                );
+                const data = await response.json();
+                const videoId = data.items[0]?.id.videoId;
+                return {
+                    ...exercise,
+                    _id: exerciseToChangeId,
+                    videoUrl: videoId ? `https://www.youtube.com/embed/${videoId}` : "https://www.youtube.com/embed/dQw4w9WgXcQ", // Fallback
+                };
+            })
+        );
 
-        res.status(200).json(newExercise);
+
+        res.status(200).json(newExerciseVideos);
     } catch (error) {
         console.error("Error al cambiar ejercicio:", error);
         res.status(500).json({ error: "Error interno del servidor" });

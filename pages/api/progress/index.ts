@@ -24,9 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const serializedProgress = progress.map((p) => ({
           _id: p._id.toString(),
           userId: p.userId.toString(),
-          routineId: p.routineId.toString(),
-          dayIndex: p.dayIndex,
-          exerciseIndex: p.exerciseIndex,
+          name: p.name,
           sets: p.sets,
           reps: p.reps,
           repsUnit: p.repsUnit,
@@ -62,9 +60,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.status(201).json({
           _id: progressEntry._id.toString(),
           userId: progressEntry.userId.toString(),
-          routineId: progressEntry.routineId.toString(),
-          dayIndex: progressEntry.dayIndex,
-          exerciseIndex: progressEntry.exerciseIndex,
+          name: progressEntry.name,
           sets: progressEntry.sets,
           reps: progressEntry.reps,
           repsUnit: progressEntry.repsUnit,
