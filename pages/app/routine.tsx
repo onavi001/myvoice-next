@@ -50,6 +50,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
   const [expandedVideos, setExpandedVideos] = useState<Record<number, boolean>>({});
   const [currentDayIndex, setCurrentDayIndex] = useState<number | null>(null);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState<number | null>(null);
+  const [exerciseInProgress, setExerciseInProgress] = useState<Record<string, boolean>>({});
 
   const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || "TU_CLAVE_API_YOUTUBE";
 
@@ -193,6 +194,28 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
     }
   };
 
+  const handleStartExercise = (dayIndex: number, exerciseIndex: number) => {
+    const key = `${dayIndex}-${exerciseIndex}`;
+    const restTime = selectedRoutineIndex !== null 
+      ? routines[selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex].rest 
+      : null;
+    setExerciseInProgress((prev) => ({ ...prev, [key]: true }));
+    console.log(restTime)
+    if (restTime) {
+      const timeInSeconds = parseInt(restTime, 10);
+      console.log(timeInSeconds)
+      setTimeout(() => {
+        setExerciseInProgress((prev) => ({ ...prev, [key]: false }));
+        if (selectedRoutineIndex !== null) {
+          //agregar una alarma
+          const audio = new Audio("/alarmas/alarma1.mp3");
+          audio.play().catch(error => console.error('Error al reproducir audio:', error));
+          console.log(`Descanso terminado para ${routines[selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex].name}`);
+        }
+      }, 1 * 1000);
+    }
+  };
+
   const toggleVideoExpansion = (index: number) => {
     setExpandedVideos((prev) => ({
       ...prev,
@@ -226,7 +249,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
         return;
       }
       console.log("New exercises generated:", data);
-      setGeneratedExercises(data); // Espera un array de 5 ejercicios
+      setGeneratedExercises(data);
       setIsModalOpen(true);
       setExpandedVideos({});
     } catch (err) {
@@ -377,7 +400,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
     return { circuits, standalone };
   };
 
-  if (userLoading || loading ) return <Loader />;
+  if (userLoading || loading) return <Loader />;
   if (loadingGeneratedExercise) return <FuturisticLoader />;
   if (error) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Error: {error}</div>;
 
@@ -487,214 +510,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                 const isToggling = togglingCompleted[globalIndex] || false;
                 const isSwitching = switchingVideos[globalIndex] || false;
                 const areVideosVisible = videosVisible[globalIndex] ?? true;
-
-                return (
-                  <Card key={exercise._id.toString()} className="overflow-hidden">
-                    <button
-                      onClick={() => toggleExerciseExpand(globalIndex, exercise.name)}
-                      className="w-full flex justify-between items-center p-2 text-left hover:bg-[#4A4A4A] transition-colors"
-                    >
-                      <div className="flex items-center">
-                        {isToggling ? (
-                          <Loader />
-                        ) : (
-                          <input
-                            type="checkbox"
-                            checked={currentExercise.completed || false}
-                            onChange={() => handleToggleCompleted(selectedRoutine._id, selectedDayIndex, globalIndex)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="mr-2 accent-[#34C759]"
-                          />
-                        )}
-                        <span className="text-sm font-semibold text-white truncate">{exercise.name}</span>
-                      </div>
-                      <span className="text-[#B0B0B0] text-xs">{isExpanded ? "▲" : "▼"}</span>
-                    </button>
-                    {isExpanded && (
-                      <div className="p-2 bg-[#4A4A4A] text-xs space-y-2">
-                        <div className="grid grid-cols-2 gap-1">
-                          <div>
-                            <span className="text-[#B0B0B0] font-semibold">Músculo:</span>
-                            <p className="text-[#FFFFFF]">{currentExercise.muscleGroup.join(", ")}</p>
-                            <Button
-                              onClick={() => handleNewExercise(selectedDayIndex, globalIndex)}
-                              disabled={loadingGeneratedExercise}
-                              className="my-4 flex items-center gap-1 bg-[#34C759] text-black px-2 py-1 rounded-full text-xs hover:bg-[#2ca44e] disabled:opacity-50"
-                            >
-                              <ArrowPathIcon className="w-4 h-4" />
-                              <span>Regenerar</span>
-                            </Button>
-                          </div>
-                          {currentExercise.tips && currentExercise.tips.length > 0 && (
-                            <div>
-                              <span className="text-[#B0B0B0] font-semibold">Consejos:</span>
-                              <ul className="list-disc pl-3 text-[#FFFFFF] max-w-full">
-                                {currentExercise.tips.map((tip, index) => (
-                                  <li key={index}>{tip}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                        {currentExercise.videos && currentExercise.videos.length > 0 ? (
-                          <div>
-                            {areVideosVisible && (
-                              <iframe
-                                src={
-                                  Array.isArray(currentExercise.videos) && "isCurrent" in currentExercise.videos[0]
-                                    ? (currentExercise.videos.find((v) => (v as IVideo).isCurrent) as IVideo)?.url ||
-                                      (currentExercise.videos[0] as IVideo).url
-                                    : ""
-                                }
-                                title={`Demostración de ${exercise.name}`}
-                                className="w-full h-32 rounded border border-[#4A4A4A]"
-                                frameBorder="0"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowFullScreen
-                              />
-                            )}
-                            {currentExercise.videos.length > 1 && (
-                              <div className="mt-2 flex" style={{ justifyContent: "space-around" }}>
-                                {areVideosVisible && (
-                                  <Button
-                                    onClick={() =>
-                                      handleVideoAction("prev", selectedRoutineIndex, selectedDayIndex, globalIndex)
-                                    }
-                                    className="w-auto bg-transparent text-white hover:bg-transparent rounded-full py-1 px-2 text-xs font-semibold border border-[#2DBF4E]"
-                                    disabled={isSwitching}
-                                  >
-                                    {isSwitching ? <SmallLoader /> : "<< Anterior"}
-                                  </Button>
-                                )}
-                                <Button
-                                  onClick={() =>
-                                    handleVideoAction("toggle", selectedRoutineIndex, selectedDayIndex, globalIndex)
-                                  }
-                                  className="w-auto bg-transparent text-white hover:bg-transparent rounded-full py-1 px-2 text-xs font-semibold border border-[#2DBF4E]"
-                                >
-                                  {areVideosVisible ? "Esconder" : "Mostrar videos"}
-                                </Button>
-                                {areVideosVisible && (
-                                  <Button
-                                    onClick={() =>
-                                      handleVideoAction("next", selectedRoutineIndex, selectedDayIndex, globalIndex)
-                                    }
-                                    className="w-auto bg-transparent text-white hover:bg-transparent rounded-full py-1 px-2 text-xs font-semibold border border-[#2DBF4E]"
-                                    disabled={isSwitching}
-                                  >
-                                    {isSwitching ? <SmallLoader /> : "Siguiente >>"}
-                                  </Button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ) : isLoadingVideos ? (
-                          <div className="text-center">
-                            <SmallLoader />
-                            <p className="text-[#B0B0B0] italic">Cargando video...</p>
-                          </div>
-                        ) : (
-                          <p className="text-[#B0B0B0] italic text-center">Video no disponible</p>
-                        )}
-                        <div className="grid grid-cols-3 gap-1">
-                          <div>
-                            <label className="text-[#B0B0B0]">Series:</label>
-                            <Input
-                              name="sets"
-                              type="number"
-                              value={currentExercise.sets || ""}
-                              onChange={(e) =>
-                                handleInputChange(selectedDayIndex, globalIndex, "sets", Number(e.target.value))
-                              }
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[#B0B0B0]">Reps:</label>
-                            <Input
-                              name="reps"
-                              type="number"
-                              value={currentExercise.reps || ""}
-                              onChange={(e) =>
-                                handleInputChange(selectedDayIndex, globalIndex, "reps", Number(e.target.value))
-                              }
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[#B0B0B0]">Unidad Reps:</label>
-                            <select
-                              name="repsUnit"
-                              value={currentExercise.repsUnit || "count"}
-                              onChange={(e) => handleInputChange(selectedDayIndex, globalIndex, "repsUnit", e.target.value)}
-                              className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
-                            >
-                              <option value="count">Unidades (U)</option>
-                              <option value="seconds">Segundos (S)</option>
-                            </select>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-1">
-                          <div>
-                            <label className="text-[#B0B0B0]">Peso:</label>
-                            <Input
-                              name="weight"
-                              value={currentExercise.weight || ""}
-                              onChange={(e) => handleInputChange(selectedDayIndex, globalIndex, "weight", e.target.value)}
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[#B0B0B0]">Unidad:</label>
-                            <select
-                              name="weightUnit"
-                              value={currentExercise.weightUnit || "kg"}
-                              onChange={(e) => handleInputChange(selectedDayIndex, globalIndex, "weightUnit", e.target.value)}
-                              className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
-                            >
-                              <option value="kg">Kilos (kg)</option>
-                              <option value="lb">Libras (lb)</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="text-[#B0B0B0]">Notas:</label>
-                            <Textarea
-                              name="notes"
-                              value={currentExercise.notes || ""}
-                              onChange={(e) => handleInputChange(selectedDayIndex, globalIndex, "notes", e.target.value)}
-                              className="h-8 resize-none"
-                            />
-                          </div>
-                        </div>
-                        <Button 
-                          onClick={() => handleSave(selectedDayIndex, globalIndex)}
-                          className="w-full disabled:opacity-50" 
-                          disabled={!editData[`${selectedDayIndex}-${globalIndex}`] || isSaving}
-                        >
-                          {isSaving ? <><Loader />Guardar</> : "Guardar"}
-                        </Button>
-                      </div>
-                    )}
-                  </Card>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-
-        {/* Ejercicios Individuales */}
-        {standalone.length > 0 && (
-          <div className="mb-4">
-            <h3 className="text-sm font-semibold text-white mb-2">Ejercicios Individuales</h3>
-            <ul className="space-y-2">
-              {standalone.map((exercise) => {
-                const globalIndex = selectedDay.exercises.findIndex((ex) => ex._id === exercise._id);
-                const key = `${selectedDayIndex}-${globalIndex}`;
-                const edited = editData[key] || {};
-                const currentExercise = { ...exercise, ...edited };
-                const isExpanded = expandedExercises[globalIndex] || false;
-                const isLoadingVideos = loadingVideos[globalIndex] || false;
-                const isSaving = savingProgress[key] || false;
-                const isToggling = togglingCompleted[globalIndex] || false;
-                const isSwitching = switchingVideos[globalIndex] || false;
-                const areVideosVisible = videosVisible[globalIndex] ?? true;
+                const isInProgress = exerciseInProgress[key] || false;
 
                 return (
                   <Card key={exercise._id.toString()} className="overflow-hidden">
@@ -849,15 +665,13 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                                 value={currentExercise.rest || ""}
                                 onChange={(e) => handleInputChange(selectedDayIndex, globalIndex, "rest", e.target.value)}
                               />
-                              <Button 
-                                onClick={() => handleSave(selectedDayIndex, globalIndex)}
+                              <Button
+                                onClick={() => handleStartExercise(selectedDayIndex, globalIndex)}
                                 className="flex items-center bg-[#34C759] text-black rounded-full text-xs hover:bg-[#2ca44e] disabled:opacity-50"
+                                disabled={isInProgress}
                               >
-                                <div className="grid grid-cols-2 ">
-                                  
-                                  <span className="ml-1">Start</span>
-                                  <PlayCircleIcon className="w-4 h-4 ml-2" />
-                                </div>
+                                <span className="ml-1">Rest</span>
+                                <PlayCircleIcon className="w-4 h-4 ml-2" />
                               </Button>
                             </div>
                           </div>
@@ -891,12 +705,253 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                             className="h-8 resize-none"
                           />
                         </div>
-                        <Button 
+                        <Button
                           onClick={() => handleSave(selectedDayIndex, globalIndex)}
-                          className="w-full disabled:opacity-50 " 
+                          className="w-full disabled:opacity-50"
                           disabled={!editData[`${selectedDayIndex}-${globalIndex}`] || isSaving}
                         >
-                          {isSaving ? <><Loader />Guardar</> : "Guardar"}
+                          {isSaving ? (
+                            <>
+                              <Loader />
+                              Guardar
+                            </>
+                          ) : (
+                            "Guardar"
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+
+        {/* Ejercicios Individuales */}
+        {standalone.length > 0 && (
+          <div className="mb-4">
+            <h3 className="text-sm font-semibold text-white mb-2">Ejercicios Individuales</h3>
+            <ul className="space-y-2">
+              {standalone.map((exercise) => {
+                const globalIndex = selectedDay.exercises.findIndex((ex) => ex._id === exercise._id);
+                const key = `${selectedDayIndex}-${globalIndex}`;
+                const edited = editData[key] || {};
+                const currentExercise = { ...exercise, ...edited };
+                const isExpanded = expandedExercises[globalIndex] || false;
+                const isLoadingVideos = loadingVideos[globalIndex] || false;
+                const isSaving = savingProgress[key] || false;
+                const isToggling = togglingCompleted[globalIndex] || false;
+                const isSwitching = switchingVideos[globalIndex] || false;
+                const areVideosVisible = videosVisible[globalIndex] ?? true;
+                const isInProgress = exerciseInProgress[key] || false;
+
+                return (
+                  <Card key={exercise._id.toString()} className="overflow-hidden">
+                    <button
+                      onClick={() => toggleExerciseExpand(globalIndex, exercise.name)}
+                      className="w-full flex justify-between items-center p-2 text-left hover:bg-[#4A4A4A] transition-colors"
+                    >
+                      <div className="flex items-center">
+                        {isToggling ? (
+                          <Loader />
+                        ) : (
+                          <input
+                            type="checkbox"
+                            checked={currentExercise.completed || false}
+                            onChange={() => handleToggleCompleted(selectedRoutine._id, selectedDayIndex, globalIndex)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="mr-2 accent-[#34C759]"
+                          />
+                        )}
+                        <span className="text-sm font-semibold text-white truncate">{exercise.name}</span>
+                      </div>
+                      <span className="text-[#B0B0B0] text-xs">{isExpanded ? "▲" : "▼"}</span>
+                    </button>
+                    {isExpanded && (
+                      <div className="p-2 bg-[#4A4A4A] text-xs space-y-2">
+                        <div className="grid grid-cols-2 gap-1">
+                          <div>
+                            <span className="text-[#B0B0B0] font-semibold">Músculo:</span>
+                            <p className="text-[#FFFFFF]">{currentExercise.muscleGroup.join(", ")}</p>
+                            <Button
+                              onClick={() => handleNewExercise(selectedDayIndex, globalIndex)}
+                              disabled={loadingGeneratedExercise}
+                              className="my-4 flex items-center gap-1 bg-[#34C759] text-black px-2 py-1 rounded-full text-xs hover:bg-[#2ca44e] disabled:opacity-50"
+                            >
+                              <ArrowPathIcon className="w-4 h-4" />
+                              <span>Regenerar</span>
+                            </Button>
+                          </div>
+                          {currentExercise.tips && currentExercise.tips.length > 0 && (
+                            <div>
+                              <span className="text-[#B0B0B0] font-semibold">Consejos:</span>
+                              <ul className="list-disc pl-3 text-[#FFFFFF] max-w-full">
+                                {currentExercise.tips.map((tip, index) => (
+                                  <li key={index}>{tip}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                        {currentExercise.videos && currentExercise.videos.length > 0 ? (
+                          <div>
+                            {areVideosVisible && (
+                              <iframe
+                                src={
+                                  Array.isArray(currentExercise.videos) && "isCurrent" in currentExercise.videos[0]
+                                    ? (currentExercise.videos.find((v) => (v as IVideo).isCurrent) as IVideo)?.url ||
+                                      (currentExercise.videos[0] as IVideo).url
+                                    : ""
+                                }
+                                title={`Demostración de ${exercise.name}`}
+                                className="w-full h-32 rounded border border-[#4A4A4A]"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                              />
+                            )}
+                            {currentExercise.videos.length > 1 && (
+                              <div className="mt-2 flex" style={{ justifyContent: "space-around" }}>
+                                {areVideosVisible && (
+                                  <Button
+                                    onClick={() =>
+                                      handleVideoAction("prev", selectedRoutineIndex, selectedDayIndex, globalIndex)
+                                    }
+                                    className="w-auto bg-transparent text-white hover:bg-transparent rounded-full py-1 px-2 text-xs font-semibold border border-[#2DBF4E]"
+                                    disabled={isSwitching}
+                                  >
+                                    {isSwitching ? <SmallLoader /> : "<< Anterior"}
+                                  </Button>
+                                )}
+                                <Button
+                                  onClick={() =>
+                                    handleVideoAction("toggle", selectedRoutineIndex, selectedDayIndex, globalIndex)
+                                  }
+                                  className="w-auto bg-transparent text-white hover:bg-transparent rounded-full py-1 px-2 text-xs font-semibold border border-[#2DBF4E]"
+                                >
+                                  {areVideosVisible ? "Esconder" : "Mostrar videos"}
+                                </Button>
+                                {areVideosVisible && (
+                                  <Button
+                                    onClick={() =>
+                                      handleVideoAction("next", selectedRoutineIndex, selectedDayIndex, globalIndex)
+                                    }
+                                    className="w-auto bg-transparent text-white hover:bg-transparent rounded-full py-1 px-2 text-xs font-semibold border border-[#2DBF4E]"
+                                    disabled={isSwitching}
+                                  >
+                                    {isSwitching ? <SmallLoader /> : "Siguiente >>"}
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : isLoadingVideos ? (
+                          <div className="text-center">
+                            <SmallLoader />
+                            <p className="text-[#B0B0B0] italic">Cargando video...</p>
+                          </div>
+                        ) : (
+                          <p className="text-[#B0B0B0] italic text-center">Video no disponible</p>
+                        )}
+                        <div className="grid grid-cols-3 gap-1">
+                          <div>
+                            <label className="text-[#B0B0B0]">Series:</label>
+                            <Input
+                              name="sets"
+                              type="number"
+                              value={currentExercise.sets || ""}
+                              onChange={(e) =>
+                                handleInputChange(selectedDayIndex, globalIndex, "sets", Number(e.target.value))
+                              }
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[#B0B0B0]">Reps:</label>
+                            <Input
+                              name="reps"
+                              type="number"
+                              value={currentExercise.reps || ""}
+                              onChange={(e) =>
+                                handleInputChange(selectedDayIndex, globalIndex, "reps", Number(e.target.value))
+                              }
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[#B0B0B0]">Unidad Reps:</label>
+                            <select
+                              name="repsUnit"
+                              value={currentExercise.repsUnit || "count"}
+                              onChange={(e) => handleInputChange(selectedDayIndex, globalIndex, "repsUnit", e.target.value)}
+                              className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
+                            >
+                              <option value="count">Unidades (U)</option>
+                              <option value="seconds">Segundos (S)</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1">
+                          <div>
+                            <label className="text-[#B0B0B0]">Descanso:</label>
+                            <div className="grid grid-cols-2 gap-1">
+                              <Input
+                                name="rest"
+                                value={currentExercise.rest || ""}
+                                onChange={(e) => handleInputChange(selectedDayIndex, globalIndex, "rest", e.target.value)}
+                              />
+                              <Button
+                                onClick={() => handleStartExercise(selectedDayIndex, globalIndex)}
+                                className="flex items-center bg-[#34C759] text-black rounded-full text-xs hover:bg-[#2ca44e] disabled:opacity-50"
+                                disabled={isInProgress}
+                              >
+                                <span className="ml-1">Rest</span>
+                                <PlayCircleIcon className="w-4 h-4 ml-2" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-[#B0B0B0]">Peso:</label>
+                            <Input
+                              name="weight"
+                              value={currentExercise.weight || ""}
+                              onChange={(e) => handleInputChange(selectedDayIndex, globalIndex, "weight", e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[#B0B0B0]">Unidad:</label>
+                            <select
+                              name="weightUnit"
+                              value={currentExercise.weightUnit || "kg"}
+                              onChange={(e) => handleInputChange(selectedDayIndex, globalIndex, "weightUnit", e.target.value)}
+                              className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
+                            >
+                              <option value="kg">Kilos (kg)</option>
+                              <option value="lb">Libras (lb)</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[#B0B0B0]">Notas:</label>
+                          <Textarea
+                            name="notes"
+                            value={currentExercise.notes || ""}
+                            onChange={(e) => handleInputChange(selectedDayIndex, globalIndex, "notes", e.target.value)}
+                            className="h-8 resize-none"
+                          />
+                        </div>
+                        <Button
+                          onClick={() => handleSave(selectedDayIndex, globalIndex)}
+                          className="w-full disabled:opacity-50"
+                          disabled={!editData[`${selectedDayIndex}-${globalIndex}`] || isSaving}
+                        >
+                          {isSaving ? (
+                            <>
+                              <Loader />
+                              Guardar
+                            </>
+                          ) : (
+                            "Guardar"
+                          )}
                         </Button>
                       </div>
                     )}
@@ -914,7 +969,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
         )}
       </div>
 
-      {/* Modal para mostrar los 5 ejercicios */}
+      {/* Modal con max-height y scroll */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
         <h3 className="text-sm font-bold text-[#34C759] mb-2">Selecciona un nuevo ejercicio</h3>
         <div className="max-h-[400px] overflow-y-auto scrollbar-hidden">
