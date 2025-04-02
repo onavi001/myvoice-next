@@ -212,7 +212,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
           audio.play().catch(error => console.error('Error al reproducir audio:', error));
           console.log(`Descanso terminado para ${routines[selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex].name}`);
         }
-      }, 1 * 1000);
+      }, timeInSeconds * 1000);
     }
   };
 
