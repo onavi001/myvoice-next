@@ -27,7 +27,7 @@ import ExerciseModel from "../../models/Exercise";
 import VideoModel, { IVideo } from "../../models/Video";
 import Loader, { FuturisticLoader, SmallLoader } from "../../components/Loader";
 import { Types } from "mongoose";
-import { ArrowPathIcon } from "@heroicons/react/16/solid";
+import { ArrowPathIcon, PlayCircleIcon } from "@heroicons/react/16/solid";
 import Modal from "../../components/Modal";
 
 export default function RoutinePage({ initialRoutines }: { initialRoutines: RoutineData[] }) {
@@ -663,8 +663,12 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                             />
                           </div>
                         </div>
-                        <Button onClick={() => handleSave(selectedDayIndex, globalIndex)} className="w-full" disabled={isSaving}>
-                          {isSaving ? <Loader /> : "Guardar"}
+                        <Button 
+                          onClick={() => handleSave(selectedDayIndex, globalIndex)}
+                          className="w-full disabled:opacity-50" 
+                          disabled={!editData[`${selectedDayIndex}-${globalIndex}`] || isSaving}
+                        >
+                          {isSaving ? <><Loader />Guardar</> : "Guardar"}
                         </Button>
                       </div>
                     )}
@@ -838,6 +842,26 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                         </div>
                         <div className="grid grid-cols-3 gap-1">
                           <div>
+                            <label className="text-[#B0B0B0]">Descanso:</label>
+                            <div className="grid grid-cols-2 gap-1">
+                              <Input
+                                name="rest"
+                                value={currentExercise.rest || ""}
+                                onChange={(e) => handleInputChange(selectedDayIndex, globalIndex, "rest", e.target.value)}
+                              />
+                              <Button 
+                                onClick={() => handleSave(selectedDayIndex, globalIndex)}
+                                className="flex items-center bg-[#34C759] text-black rounded-full text-xs hover:bg-[#2ca44e] disabled:opacity-50"
+                              >
+                                <div className="grid grid-cols-2 ">
+                                  
+                                  <span className="ml-1">Start</span>
+                                  <PlayCircleIcon className="w-4 h-4 ml-2" />
+                                </div>
+                              </Button>
+                            </div>
+                          </div>
+                          <div>
                             <label className="text-[#B0B0B0]">Peso:</label>
                             <Input
                               name="weight"
@@ -857,18 +881,22 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                               <option value="lb">Libras (lb)</option>
                             </select>
                           </div>
-                          <div>
-                            <label className="text-[#B0B0B0]">Notas:</label>
-                            <Textarea
-                              name="notes"
-                              value={currentExercise.notes || ""}
-                              onChange={(e) => handleInputChange(selectedDayIndex, globalIndex, "notes", e.target.value)}
-                              className="h-8 resize-none"
-                            />
-                          </div>
                         </div>
-                        <Button onClick={() => handleSave(selectedDayIndex, globalIndex)} className="w-full" disabled={isSaving}>
-                          {isSaving ? <Loader /> : "Guardar"}
+                        <div>
+                          <label className="text-[#B0B0B0]">Notas:</label>
+                          <Textarea
+                            name="notes"
+                            value={currentExercise.notes || ""}
+                            onChange={(e) => handleInputChange(selectedDayIndex, globalIndex, "notes", e.target.value)}
+                            className="h-8 resize-none"
+                          />
+                        </div>
+                        <Button 
+                          onClick={() => handleSave(selectedDayIndex, globalIndex)}
+                          className="w-full disabled:opacity-50 " 
+                          disabled={!editData[`${selectedDayIndex}-${globalIndex}`] || isSaving}
+                        >
+                          {isSaving ? <><Loader />Guardar</> : "Guardar"}
                         </Button>
                       </div>
                     )}

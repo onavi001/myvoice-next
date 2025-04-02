@@ -41,12 +41,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     case "POST":
       try {
-        const { routineId, dayIndex, exerciseIndex, sets, reps, weight, notes, date, weightUnit, repsUnit } = req.body;
+        const { name, sets, reps, weight, notes, date, weightUnit, repsUnit } = req.body;
         const progressEntry = new Progress({
           userId,
-          routineId,
-          dayIndex,
-          exerciseIndex,
+          name: name,
           sets,
           reps,
           repsUnit: repsUnit || "count",
