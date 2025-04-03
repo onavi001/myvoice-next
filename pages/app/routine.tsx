@@ -27,8 +27,9 @@ import ExerciseModel from "../../models/Exercise";
 import VideoModel, { IVideo } from "../../models/Video";
 import Loader, { FuturisticLoader, SmallLoader } from "../../components/Loader";
 import { Types } from "mongoose";
-import { ArrowPathIcon, PlayCircleIcon } from "@heroicons/react/16/solid";
+import { ArrowPathIcon, PlayCircleIcon, EyeIcon } from "@heroicons/react/16/solid";
 import Modal from "../../components/Modal";
+import ModelWorkoutModal from "../../components/ModelWorkoutModal";
 
 export default function RoutinePage({ initialRoutines }: { initialRoutines: RoutineData[] }) {
   const dispatch = useDispatch<AppDispatch>();
@@ -51,9 +52,9 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
   const [currentDayIndex, setCurrentDayIndex] = useState<number | null>(null);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState<number | null>(null);
   const [exerciseInProgress, setExerciseInProgress] = useState<Record<string, boolean>>({});
-
+  const [openBodyModal,setOpenBodyModal] = useState<boolean>(false);
+  const [musclesToShow, setMusclesToShow] = useState<string[]>([]);
   const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || "TU_CLAVE_API_YOUTUBE";
-
   useEffect(() => {
     if (routines.length > 0) {
       const dayIndex = localStorage.getItem("dayIndex");
@@ -200,17 +201,14 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
       ? routines[selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex].rest 
       : null;
     setExerciseInProgress((prev) => ({ ...prev, [key]: true }));
-    console.log(restTime)
     if (restTime) {
       const timeInSeconds = parseInt(restTime, 10);
-      console.log(timeInSeconds)
       setTimeout(() => {
         setExerciseInProgress((prev) => ({ ...prev, [key]: false }));
         if (selectedRoutineIndex !== null) {
           //agregar una alarma
           const audio = new Audio("/alarmas/alarma1.mp3");
           audio.play().catch(error => console.error('Error al reproducir audio:', error));
-          console.log(`Descanso terminado para ${routines[selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex].name}`);
         }
       }, timeInSeconds * 1000);
     }
@@ -248,7 +246,6 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
         console.error("Error generating new exercises:", data);
         return;
       }
-      console.log("New exercises generated:", data);
       setGeneratedExercises(data);
       setIsModalOpen(true);
       setExpandedVideos({});
@@ -287,7 +284,6 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
           },
         })
       ).unwrap();
-      console.log("Ejercicio actualizado:", selectedExercise);
 
       setIsModalOpen(false);
       setGeneratedExercises([]);
@@ -434,7 +430,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
   const selectedRoutine = routines[selectedRoutineIndex] ? routines[selectedRoutineIndex] : routines[0];
   const selectedDay = selectedRoutine.days[selectedDayIndex] ? selectedRoutine.days[selectedDayIndex] : selectedRoutine.days[0];
   const { circuits, standalone } = groupExercisesByCircuit(selectedDay?.exercises as unknown as IExercise[]);
-
+  
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
       <div className="p-4 max-w-full mx-auto flex-1">
@@ -478,10 +474,14 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
         <Card className="mb-4 max-h-24 overflow-y-auto scrollbar-hidden">
           <div className="mx-5 grid grid-cols-2 gap-1">
             <div className="items-center">
-              <span className="text-[#B0B0B0] font-semibold text-xs min-w-[100px]">🏋️ Músculos:</span>
+              <button onClick={()=>{setOpenBodyModal(true);setMusclesToShow(selectedDay.musclesWorked);}} className="flex text-[#B0B0B0] font-semibold text-xs min-w-[100px]">
+                🏋️ Músculos: 
+                <EyeIcon className="w-4 h-4 ml-2" />
+              </button>
               <ul className="list-disc pl-3 text-[#FFFFFF] text-xs max-w-full">
                 <li>{selectedDay.musclesWorked.join(", ")}</li>
               </ul>
+              {openBodyModal && <ModelWorkoutModal musclesToShow={musclesToShow} isOpen={openBodyModal} onClose={()=>setOpenBodyModal(false)} />}
             </div>
             <div className="items-center">
               <span className="text-[#B0B0B0] font-semibold text-xs min-w-[100px]">🔥 Calentamiento:</span>
@@ -538,7 +538,10 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                       <div className="p-2 bg-[#4A4A4A] text-xs space-y-2">
                         <div className="grid grid-cols-2 gap-1">
                           <div>
-                            <span className="text-[#B0B0B0] font-semibold">Músculo:</span>
+                            <button onClick={()=>{setOpenBodyModal(true);setMusclesToShow(currentExercise.muscleGroup);}} className="flex text-[#B0B0B0] font-semibold">
+                              Músculo:
+                              <EyeIcon className="w-4 h-4 ml-2" />
+                            </button>
                             <p className="text-[#FFFFFF]">{currentExercise.muscleGroup.join(", ")}</p>
                             <Button
                               onClick={() => handleNewExercise(selectedDayIndex, globalIndex)}
@@ -772,7 +775,10 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                       <div className="p-2 bg-[#4A4A4A] text-xs space-y-2">
                         <div className="grid grid-cols-2 gap-1">
                           <div>
-                            <span className="text-[#B0B0B0] font-semibold">Músculo:</span>
+                            <button onClick={()=>{setOpenBodyModal(true);setMusclesToShow(currentExercise.muscleGroup);}} className="flex text-[#B0B0B0] font-semibold">
+                              Músculo:
+                              <EyeIcon className="w-4 h-4 ml-2" />
+                            </button>
                             <p className="text-[#FFFFFF]">{currentExercise.muscleGroup.join(", ")}</p>
                             <Button
                               onClick={() => handleNewExercise(selectedDayIndex, globalIndex)}
