@@ -293,6 +293,8 @@ export const musclesData:Muscle[] = [
       name: 'Front delts',
       nameEs: 'Deltoides frontales',
       aliases: [
+        'Deltoides',
+        'Hombros',
         'Front deltoids',
         'Deltoides anteriores',
         'Anterior delts',
@@ -310,6 +312,8 @@ export const musclesData:Muscle[] = [
       name: 'Front delts',
       nameEs: 'Deltoides frontales',
       aliases: [
+        'Deltoides',
+        'Hombros',
         'Front deltoids',
         'Deltoides anteriores',
         'Anterior delts',
@@ -543,6 +547,7 @@ export const musclesData:Muscle[] = [
       name: 'Lats and Teres major',
       nameEs: 'Dorsales y Teres mayor',
       aliases: [
+        'Espalda',
         'Latissimus dorsi',
         'Dorsales',
         'Lats',
@@ -562,6 +567,7 @@ export const musclesData:Muscle[] = [
       name: 'Lats and Teres major',
       nameEs: 'Dorsales y Teres mayor',
       aliases: [
+        'Espalda',
         'Latissimus dorsi',
         'Dorsales',
         'Lats',
@@ -581,6 +587,7 @@ export const musclesData:Muscle[] = [
       name: 'Lats and Teres major',
       nameEs: 'Dorsales y Teres mayor',
       aliases: [
+        'Espalda',
         'Latissimus dorsi',
         'Dorsales',
         'Lats',
@@ -600,6 +607,8 @@ export const musclesData:Muscle[] = [
       name: 'Lower traps',
       nameEs: 'Trapecios inferiores',
       aliases: [
+        'Trapecios',
+        'Espalda',
         'Lower trapezius',
         'Trapecios bajos',
         'Traps lower',
@@ -615,6 +624,8 @@ export const musclesData:Muscle[] = [
       name: 'Lower traps',
       nameEs: 'Trapecios inferiores',
       aliases: [
+        'Trapecios',
+        'Espalda',
         'Lower trapezius',
         'Trapecios bajos',
         'Traps lower',
@@ -664,6 +675,8 @@ export const musclesData:Muscle[] = [
       name: 'Middle traps',
       nameEs: 'Trapecios medios',
       aliases: [
+        'Trapecios',
+        'Espalda',
         'Middle trapezius',
         'Trapecios medios',
         'Traps middle',
@@ -679,6 +692,8 @@ export const musclesData:Muscle[] = [
       name: 'Middle traps',
       nameEs: 'Trapecios medios',
       aliases: [
+        'Trapecios',
+        'Espalda',
         'Middle trapezius',
         'Trapecios medios',
         'Traps middle',
@@ -778,6 +793,9 @@ export const musclesData:Muscle[] = [
       name: 'Rear delts',
       nameEs: 'Deltoides traseros',
       aliases: [
+        'Deltoides',
+        'Espalda',
+        'Hombros',
         'Rear deltoids',
         'Deltoides posteriores',
         'Posterior delts',
@@ -795,6 +813,9 @@ export const musclesData:Muscle[] = [
       name: 'Rear delts',
       nameEs: 'Deltoides traseros',
       aliases: [
+        'Deltoides',
+        'Espalda',
+        'Hombros',
         'Rear deltoids',
         'Deltoides posteriores',
         'Posterior delts',
@@ -924,6 +945,8 @@ export const musclesData:Muscle[] = [
       name: 'Side delts',
       nameEs: 'Deltoides laterales',
       aliases: [
+        'Deltoides',
+        'Hombros',
         'Lateral deltoids',
         'Deltoides laterales',
         'Side deltoids',
@@ -942,6 +965,8 @@ export const musclesData:Muscle[] = [
       name: 'Side delts',
       nameEs: 'Deltoides laterales',
       aliases: [
+        'Deltoides',
+        'Hombros',
         'Lateral deltoids',
         'Deltoides laterales',
         'Side deltoids',
@@ -960,6 +985,8 @@ export const musclesData:Muscle[] = [
       name: 'Side delts',
       nameEs: 'Deltoides laterales',
       aliases: [
+        'Deltoides',
+        'Hombros',
         'Lateral deltoids',
         'Deltoides laterales',
         'Side deltoids',
@@ -978,6 +1005,8 @@ export const musclesData:Muscle[] = [
       name: 'Side delts',
       nameEs: 'Deltoides laterales',
       aliases: [
+        'Deltoides',
+        'Hombros',
         'Lateral deltoids',
         'Deltoides laterales',
         'Side deltoids',
@@ -996,6 +1025,7 @@ export const musclesData:Muscle[] = [
       name: 'Spinal erectors',
       nameEs: 'Erectores de la columna',
       aliases: [
+        'Espalda',
         'Erector spinae',
         'Erectores espinales',
         'Spinal muscles',
@@ -1132,6 +1162,8 @@ export const musclesData:Muscle[] = [
       name: 'Upper traps',
       nameEs: 'Trapecios superiores',
       aliases: [
+        'Trapecios',
+        'Espalda',
         'Upper trapezius',
         'Trapecios altos',
         'Traps upper',
@@ -1149,6 +1181,8 @@ export const musclesData:Muscle[] = [
       name: 'Upper traps',
       nameEs: 'Trapecios superiores',
       aliases: [
+        'Trapecios',
+        'Espalda',
         'Upper trapezius',
         'Trapecios altos',
         'Traps upper',
@@ -1166,6 +1200,8 @@ export const musclesData:Muscle[] = [
       name: 'Upper traps',
       nameEs: 'Trapecios superiores',
       aliases: [
+        'Trapecios',
+        'Espalda',
         'Upper trapezius',
         'Trapecios altos',
         'Traps upper',
@@ -1183,6 +1219,8 @@ export const musclesData:Muscle[] = [
       name: 'Upper traps',
       nameEs: 'Trapecios superiores',
       aliases: [
+        'Trapecios',
+        'Espalda',
         'Upper trapezius',
         'Trapecios altos',
         'Traps upper',
