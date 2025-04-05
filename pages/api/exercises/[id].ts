@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import jwt from "jsonwebtoken";
 import { dbConnect } from "../../../lib/mongodb";
 import Exercise, { IExercise } from "../../../models/Exercise";
-import Video, { IVideo } from "../../../models/Video";
+import Video from "../../../models/Video";
 import Day from "../../../models/Day";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   switch (req.method) {
     case "PUT":
       try {
-        const { name, muscleGroup, sets, reps, weight, rest, tips, completed, videos, notes, weightUnit, repsUnit } = req.body;
+        const { name, muscleGroup, sets, reps, weight, rest, tips, completed, videos, notes, weightUnit, repsUnit, circuitId } = req.body;
         const updateData:Partial<IExercise> = {};
         if (name) updateData.name = name;
         if (muscleGroup) updateData.muscleGroup = muscleGroup;
@@ -35,31 +35,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (completed !== undefined) updateData.completed = completed;
         if (videos) updateData.videos = videos;
         if (notes !== undefined) updateData.notes = notes;
+        if (circuitId !== undefined) updateData.circuitId = circuitId;
 
         const exercise = await Exercise.findByIdAndUpdate(id, updateData, { new: true, runValidators: true })
           .populate("videos")
           .lean();
         if (!exercise) return res.status(404).json({ message: "Ejercicio no encontrado" });
 
-        res.status(200).json({
-          _id: exercise._id.toString(),
-          name: exercise.name,
-          muscleGroup: exercise.muscleGroup,
-          sets: exercise.sets,
-          reps: exercise.reps,
-          repsUnit: exercise.repsUnit,
-          weightUnit: exercise.weightUnit,
-          weight: exercise.weight,
-          rest: exercise.rest,
-          tips: exercise.tips,
-          completed: exercise.completed,
-          videos: exercise.videos.map((v: Partial<IVideo>) => ({
-            _id: v._id?.toString(),
-            url: v.url,
-            isCurrent: v.isCurrent,
-          })),
-          notes: exercise.notes,
-        });
+        res.status(200).json(exercise);
       } catch (error) {
         res.status(500).json({ message: "Error al actualizar ejercicio", error });
       }

@@ -149,18 +149,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
         const updatedExercise = editData[key];
         if (updatedExercise) {
           const currentExercise = routines[selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex];
-          await dispatch(
-            addProgress({
-              name: currentExercise.name,
-              sets: Number(updatedExercise.sets ?? currentExercise.sets),
-              reps: Number(updatedExercise.reps ?? currentExercise.reps),
-              repsUnit: updatedExercise.repsUnit ?? currentExercise.repsUnit,
-              weightUnit: updatedExercise.weightUnit ?? currentExercise.weightUnit,
-              weight: updatedExercise.weight ?? currentExercise.weight ?? "",
-              notes: updatedExercise.notes ?? currentExercise.notes ?? "",
-              date: new Date(),
-            })
-          ).unwrap();
+          //primero el ejercicio
           await dispatch(
             updateExercise({
               routineId: routines[selectedRoutineIndex]._id,
@@ -170,12 +159,31 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
                 sets: Number(updatedExercise.sets ?? currentExercise.sets),
                 reps: Number(updatedExercise.reps ?? currentExercise.reps),
                 repsUnit: updatedExercise.repsUnit ?? currentExercise.repsUnit,
+                rest: updatedExercise.rest ?? currentExercise.rest,
                 weightUnit: updatedExercise.weightUnit ?? currentExercise.weightUnit,
                 weight: updatedExercise.weight ?? currentExercise.weight,
                 notes: updatedExercise.notes ?? currentExercise.notes,
+                
               },
             })
           ).unwrap();
+          const validProgress = Object.keys(editData[key]).filter(key => key !== "rest");
+          //despues el progreso si es que existe algun cambio
+          if(validProgress){
+            await dispatch(
+              addProgress({
+                name: currentExercise.name,
+                sets: Number(updatedExercise.sets ?? currentExercise.sets),
+                reps: Number(updatedExercise.reps ?? currentExercise.reps),
+                repsUnit: updatedExercise.repsUnit ?? currentExercise.repsUnit,
+                weightUnit: updatedExercise.weightUnit ?? currentExercise.weightUnit,
+                weight: updatedExercise.weight ?? currentExercise.weight ?? "",
+                notes: updatedExercise.notes ?? currentExercise.notes ?? "",
+                date: new Date(),
+              })
+            ).unwrap();
+          }
+          
           setEditData((prev) => {
             const newData = { ...prev };
             delete newData[key];
@@ -347,6 +355,49 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
     }
   };
 
+  const handleResetRoutineProgress = async (routineId: Types.ObjectId) => {
+    if (selectedRoutineIndex === null) return;
+  
+    const days = routines[selectedRoutineIndex].days;
+    for (const currentDays of days) {
+      const dayIndex = days.indexOf(currentDays);
+      handleResetDayProgress(routineId,dayIndex)
+    }
+  }
+
+  const handleResetDayProgress = async (routineId: Types.ObjectId, dayIndex: number) => {
+    if (selectedRoutineIndex === null) return;
+  
+    const exercises = routines[selectedRoutineIndex].days[dayIndex].exercises;
+  
+    for (const currentExercise of exercises) {
+      const exerciseIndex = exercises.indexOf(currentExercise);
+  
+      setTogglingCompleted((prev) => ({ ...prev, [exerciseIndex]: true }));
+  
+      try {
+        await dispatch(
+          updateExerciseCompleted({
+            routineId,
+            dayIndex,
+            exerciseIndex,
+            completed: false,
+          })
+        ).unwrap();
+      } catch (err) {
+        const error = err as ThunkError;
+        if (error.message === "Unauthorized" && error.status === 401) {
+          router.push("/login");
+          return; // Salir si hay error de autorización
+        } else {
+          console.error("Error toggling completed:", error);
+        }
+      } finally {
+        setTogglingCompleted((prev) => ({ ...prev, [exerciseIndex]: false }));
+      }
+    }
+  };
+  
   const handleToggleCompleted = async (routineId: Types.ObjectId, dayIndex: number, exerciseIndex: number) => {
     if (selectedRoutineIndex !== null) {
       setTogglingCompleted((prev) => ({ ...prev, [exerciseIndex]: true }));
@@ -426,10 +477,13 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
       </div>
     );
   }
-
+  //#region 
   const selectedRoutine = routines[selectedRoutineIndex] ? routines[selectedRoutineIndex] : routines[0];
+
   const selectedDay = selectedRoutine.days[selectedDayIndex] ? selectedRoutine.days[selectedDayIndex] : selectedRoutine.days[0];
+
   const { circuits, standalone } = groupExercisesByCircuit(selectedDay?.exercises as unknown as IExercise[]);
+  //#endregion
   
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
@@ -453,7 +507,11 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
             </button>
           ))}
         </div>
-        <ProgressBar progress={calculateWeekProgress(selectedRoutine)} label="Progreso Semanal" />
+        <ProgressBar 
+          progress={calculateWeekProgress(selectedRoutine)} 
+          label="Progreso Semanal" 
+          resetFunction={() => handleResetRoutineProgress(selectedRoutine._id)}
+        />
         <div className="flex overflow-x-auto space-x-2 mb-4 scrollbar-hidden">
           {selectedRoutine.days.map((day, index) => (
             <button
@@ -470,7 +528,11 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
             </button>
           ))}
         </div>
-        <ProgressBar progress={calculateDayProgress(selectedDay)} label="Progreso Día" />
+        <ProgressBar
+          progress={calculateDayProgress(selectedDay)}
+          label="Progreso Día"
+          resetFunction={() => handleResetDayProgress(selectedRoutine._id, selectedDayIndex)}
+        />
         <Card className="mb-4 max-h-24 overflow-y-auto scrollbar-hidden">
           <div className="mx-5 grid grid-cols-2 gap-1">
             <div className="items-center">
