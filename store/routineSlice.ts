@@ -508,7 +508,12 @@ const routineSlice = createSlice({
         state.error = action.payload?.message ?? "Error desconocido";
       })
       // Update Exercise
+      .addCase(updateExercise.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(updateExercise.fulfilled, (state, action: PayloadAction<{ routineId: Types.ObjectId; dayId: Types.ObjectId; exerciseId: Types.ObjectId; exercise: RoutineData["days"][number]["exercises"][number] }>) => {
+        state.loading = false;
         const routineIndex = state.routines.findIndex((r) => r._id === action.payload.routineId);
         if (routineIndex !== -1) {
           const dayIndex = state.routines[routineIndex].days.findIndex((d) => d._id === action.payload.dayId);

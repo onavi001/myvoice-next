@@ -6,12 +6,14 @@ import { useRouter } from "next/router";
 import { ThunkError } from "../store/routineSlice";
 import { IExercise } from "../models/Exercise";
 import { fetchVideos } from "../utils/fetchVideos";
+import { useState } from "react";
 
 export default function useExerciseActions() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { routines, selectedRoutineIndex } = useSelector((state: RootState) => state.routine);
   const { user } = useSelector((state: RootState) => state.user);
+  const [loadingVideos, setLoadingVideos] = useState(false);
 
   const handleSave = async (dayIndex: number, exerciseIndex: number, editData: Partial<IExercise>) => {
     if (!user || selectedRoutineIndex === null) return;
@@ -113,6 +115,7 @@ export default function useExerciseActions() {
             repsUnit: selectedExercise.repsUnit,
             weightUnit: selectedExercise.weightUnit,
             weight: selectedExercise.weight,
+            videos: [],
           },
         })
       ).unwrap();
@@ -122,22 +125,33 @@ export default function useExerciseActions() {
       throw err;
     }
   };
-
+  
   const handleFetchVideos = async (exerciseName: string, routineIndex: number, dayIndex: number, exerciseIndex: number) => {
-    const exercise = routines[routineIndex].days[dayIndex].exercises[exerciseIndex];
-    if (exercise.videos?.length > 0) return;
-    const videos = await fetchVideos(exerciseName);
-    await dispatch(
-      setExerciseVideos({
-        routineId: routines[routineIndex]._id.toString(),
-        dayIndex,
-        exerciseIndex,
-        videos,
-      })
-    ).unwrap();
+    setLoadingVideos(true);
+    try {
+      const exercise = routines[routineIndex].days[dayIndex].exercises[exerciseIndex];
+      if (exercise.videos?.length > 0) return;
+      const videos = await fetchVideos(exerciseName);
+      await dispatch(
+        setExerciseVideos({
+          routineId: routines[routineIndex]._id.toString(),
+          dayIndex,
+          exerciseIndex,
+          videos,
+        })
+      ).unwrap();
+    } catch (err) {
+      const error = err as ThunkError;
+      if (error.message === "Unauthorized" && error.status === 401) router.push("/login");
+      throw err;
+    }finally{
+      setLoadingVideos(false);
+    }
+    
   };
 
   return {
+    loadingVideos,
     handleSave,
     handleToggleCompleted,
     handleNewExercise,

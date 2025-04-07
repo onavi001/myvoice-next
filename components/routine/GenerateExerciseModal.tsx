@@ -59,7 +59,7 @@ export default function GenerateExerciseModal({
                   )}
                 </div>
                 <Button
-                  onClick={() => onSelect(exercise)}
+                  onClick={() => {onSelect(exercise); onClose();}}
                   className="mt-2 w-full bg-[#34C759] text-black px-2 py-1 rounded-md text-xs hover:bg-[#2ca44e]"
                 >
                   Seleccionar

@@ -8,7 +8,7 @@ import ExerciseList from "../../components/routine/ExerciseList";
 import GenerateExerciseModal from "../../components/routine/GenerateExerciseModal";
 import useRoutineData from "../../hooks/useRoutineData";
 import useExerciseActions from "../../hooks/useExerciseActions";
-import Loader from "../../components/Loader";
+import Loader, { FuturisticLoader } from "../../components/Loader";
 import { RoutineData } from "../../models/Routine";
 import { GetServerSideProps } from "next";
 import jwt from "jsonwebtoken";
@@ -18,6 +18,7 @@ import DayModel, { IDay } from "../../models/Day";
 import ExerciseModel, { IExercise } from "../../models/Exercise";
 import VideoModel, { IVideo } from "../../models/Video";
 import Button from "../../components/Button";
+import { ThunkError } from "../../store/routineSlice";
 
 export default function RoutinePage({ initialRoutines }: { initialRoutines: RoutineData[] }) {
   const { loading, error, selectedRoutine, selectedDay, selectedDayIndex, setSelectedDay, setSelectedDayIndex } =
@@ -26,19 +27,28 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
   const { handleNewExercise, handleSelectExercise } = useExerciseActions();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [generatedExercises, setGeneratedExercises] = useState<Partial<IExercise & { videoUrl: string }>[]>([]);
+  const [loadingGenerate, setLoadingGenerate] = useState(false);
   const router = useRouter();
 
   const onGenerateExercise = async (dayIndex: number, exerciseIndex: number) => {
-    const exercises = await handleNewExercise(dayIndex, exerciseIndex);
-    if (exercises) {
-      setGeneratedExercises(exercises);
-      setIsModalOpen(true);
+    setLoadingGenerate(true);
+    try {
+      const exercises = await handleNewExercise(dayIndex, exerciseIndex);
+      if (exercises) {
+        setGeneratedExercises(exercises);
+        setIsModalOpen(true);
+      } 
+    } catch (err) {
+      const error = err as ThunkError;
+      if (error.message === "Unauthorized" && error.status === 401) router.push("/login");
+      throw err;
+    }finally{
+      setLoadingGenerate(false);
     }
   };
 
-  if (userLoading || loading) return <Loader />;
   if (error) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Error: {error}</div>;
-  console.log(selectedDay)
+  
   if (!selectedRoutine || !selectedDay) {
     return (
       <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
@@ -61,6 +71,8 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
 
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
+      {loadingGenerate && <FuturisticLoader />}
+      {userLoading || loading && <Loader />}
       <div className="p-4 max-w-full mx-auto flex-1">
         <RoutineSelector selectedDayIndex={selectedDayIndex} setSelectedDayIndex={setSelectedDayIndex} setSelectedDay={setSelectedDay} />
         <DayProgress routine={selectedRoutine} day={selectedDay} />

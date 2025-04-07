@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 import { IExercise } from "../../models/Exercise";
@@ -8,7 +8,7 @@ import Textarea from "../Textarea";
 import Button from "../Button";
 import VideoPlayer from "./VideoPlayer";
 import ModelWorkoutModal from "../ModelWorkoutModal";
-import Loader from "../Loader";
+import Loader, { SmallLoader } from "../Loader";
 import { ArrowPathIcon, PlayCircleIcon, EyeIcon } from "@heroicons/react/16/solid";
 import useExerciseActions from "../../hooks/useExerciseActions";
 
@@ -33,8 +33,13 @@ export default function ExerciseCard({
   const [isInProgress, setIsInProgress] = useState(false);
   const [openBodyModal, setOpenBodyModal] = useState(false);
   const [musclesToShow, setMusclesToShow] = useState<string[]>([]);
-  const { handleSave, handleToggleCompleted, handleFetchVideos } = useExerciseActions();
-
+  const { loadingVideos, handleSave, handleToggleCompleted, handleFetchVideos } = useExerciseActions();
+  useEffect(() => {
+    if (isExpanded && selectedRoutineIndex !== null) {
+      handleFetchVideos(exercise.name, selectedRoutineIndex, dayIndex, exerciseIndex);
+    }
+  }, [exercise])
+  
   const toggleExpand = () => {
     setIsExpanded(!isExpanded);
     if (!isExpanded && selectedRoutineIndex !== null) {
@@ -137,7 +142,12 @@ export default function ExerciseCard({
               </div>
             )}
           </div>
-          <VideoPlayer exercise={exercise} routineId={routineId.toString()} dayIndex={dayIndex} exerciseIndex={exerciseIndex} />
+          {
+            loadingVideos ? 
+              <SmallLoader />
+            :
+            <VideoPlayer exercise={exercise} routineId={routineId.toString()} dayIndex={dayIndex} exerciseIndex={exerciseIndex} />
+          }
           <div className="grid grid-cols-3 gap-1">
             <div>
               <label className="text-[#B0B0B0]">Series:</label>
