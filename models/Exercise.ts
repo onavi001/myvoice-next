@@ -9,7 +9,7 @@ export interface IExercise {
   reps: number;
   repsUnit: "count" | "seconds";
   weightUnit: "kg" | "lb";
-  weight: string;
+  weight: number;
   rest: string;
   tips: string[];
   completed: boolean;
@@ -24,7 +24,7 @@ const ExerciseSchema: Schema = new Schema<IExercise>({
   sets: Number,
   reps: Number,
   repsUnit: { type: String, enum: ["count", "seconds"], default: "count" },
-  weight: String,
+  weight: Number,
   weightUnit: { type: String, enum: ["kg", "lb"], default: "kg" },
   rest: String,
   tips: [String],

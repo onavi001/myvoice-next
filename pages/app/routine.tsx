@@ -20,7 +20,7 @@ import VideoModel, { IVideo } from "../../models/Video";
 import Button from "../../components/Button";
 
 export default function RoutinePage({ initialRoutines }: { initialRoutines: RoutineData[] }) {
-  const { loading, error, selectedRoutine, selectedDay, selectedDayIndex, setSelectedDayIndex } =
+  const { loading, error, selectedRoutine, selectedDay, selectedDayIndex, setSelectedDay, setSelectedDayIndex } =
     useRoutineData(initialRoutines);
   const { loading: userLoading } = useSelector((state: RootState) => state.user);
   const { handleNewExercise, handleSelectExercise } = useExerciseActions();
@@ -38,6 +38,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
 
   if (userLoading || loading) return <Loader />;
   if (error) return <div className="min-h-screen bg-[#1A1A1A] text-white flex items-center justify-center">Error: {error}</div>;
+  console.log(selectedDay)
   if (!selectedRoutine || !selectedDay) {
     return (
       <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
@@ -61,7 +62,7 @@ export default function RoutinePage({ initialRoutines }: { initialRoutines: Rout
   return (
     <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col">
       <div className="p-4 max-w-full mx-auto flex-1">
-        <RoutineSelector selectedDayIndex={selectedDayIndex} setSelectedDayIndex={setSelectedDayIndex} />
+        <RoutineSelector selectedDayIndex={selectedDayIndex} setSelectedDayIndex={setSelectedDayIndex} setSelectedDay={setSelectedDay} />
         <DayProgress routine={selectedRoutine} day={selectedDay} />
         <ExerciseList
           dayIndex={selectedRoutine.days.findIndex((d) => d._id === selectedDay._id)}

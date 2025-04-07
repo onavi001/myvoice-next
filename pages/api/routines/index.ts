@@ -134,42 +134,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return res.status(500).json({ message: "Error al crear rutina" });
         }
 
-        const serializedRoutine = {
-          _id: populatedRoutine._id.toString(),
-          userId: populatedRoutine.userId.toString(),
-          name: populatedRoutine.name,
-          days: populatedRoutine.days.map((d: Partial<IDay>) => ({
-            _id: d._id?.toString(),
-            dayName: d.dayName,
-            musclesWorked: d.musclesWorked,
-            warmupOptions: d.warmupOptions,
-            explanation: d.explanation,
-            exercises: (d.exercises ?? []).map((e: Partial<IExercise>) => ({
-              _id: e._id?.toString(),
-              name: e.name,
-              muscleGroup: e.muscleGroup,
-              sets: e.sets,
-              reps: e.reps,
-              repsUnit: e.repsUnit,
-              weightUnit: e.weightUnit,
-              weight: e.weight,
-              rest: e.rest,
-              tips: e.tips,
-              completed: e.completed,
-              videos: (e.videos ?? []).map((v: Partial<IVideo>) => ({
-                _id: v._id?.toString(),
-                url: v.url,
-                isCurrent: v.isCurrent,
-              })),
-              notes: e.notes,
-              circuitId: e.circuitId,
-            })),
-          })),
-          createdAt: populatedRoutine.createdAt.toISOString(),
-          updatedAt: populatedRoutine.updatedAt.toISOString(),
-        };
-
-        res.status(201).json(serializedRoutine);
+        res.status(201).json(populatedRoutine);
       } catch (error) {
         res.status(500).json({ message: "Error al crear rutina", error });
       }

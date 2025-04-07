@@ -49,7 +49,7 @@ export default function ProgressPage({
     reps: 0,
     repsUnit: "count",
     weightUnit: "kg",
-    weight: "",
+    weight: 0,
     notes: "",
     date: new Date(),
   });
@@ -168,7 +168,7 @@ export default function ProgressPage({
         reps: 0,
         repsUnit: "count",
         weightUnit: "kg",
-        weight: "",
+        weight: 0,
         notes: "",
         date: new Date(),
       });
@@ -203,7 +203,7 @@ export default function ProgressPage({
     datasets: [
       {
         label: "Peso",
-        data: filteredProgress.map((entry) => parseFloat(entry.weight) || 0),
+        data: filteredProgress.map((entry) => entry.weight),
         borderColor: "#34C759",
         backgroundColor: "rgba(52, 199, 89, 0.2)",
         fill: true,
@@ -564,7 +564,7 @@ export default function ProgressPage({
         </Button>
       </div>
 
-      {toastMessage && <Toast message={toastMessage} onClose={handleCloseToast} />}
+      {toastMessage && <Toast type="success" message={toastMessage} onClose={handleCloseToast} />}
     </div>
   );
 }

@@ -65,18 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const videoIds = exercises.flatMap((exercise) => exercise.videos as unknown as IVideo);
         await Exercise.deleteMany({ _id: { $in: day.exercises } });
         if (videoIds.length > 0) {
-          // Opción 1: Eliminar todos los videos sin verificar referencias
           await VideoModel.deleteMany({ _id: { $in: videoIds } });
-    
-          // Opción 2: Eliminar solo videos no referenciados por otros ejercicios (más seguro)
-          /*
-          const remainingReferences = await ExerciseModel.find({ videos: { $in: videoIds } });
-          const referencedVideoIds = remainingReferences.flatMap((ex) => ex.videos);
-          const videosToDelete = videoIds.filter((vid) => !referencedVideoIds.includes(vid));
-          if (videosToDelete.length > 0) {
-            await VideoModel.deleteMany({ _id: { $in: videosToDelete } });
-          }
-          */
         }
         await Routine.updateMany({}, { $pull: { days: id } });
         res.status(204).end();

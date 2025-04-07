@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { dbConnect } from "../../../../lib/mongodb";
 import Routine from "../../../../models/Routine";
-import Day, { IDay } from "../../../../models/Day";
+import Day from "../../../../models/Day";
 import Exercise, { IExercise } from "../../../../models/Exercise";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -16,6 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       try {
         const { dayName, musclesWorked, warmupOptions, explanation, exercises } = req.body;
         const exerciseIds = [];
+        const newExercises:IExercise[] = [];
         for (const exData of exercises || []) {
           const exercise = new Exercise({
             name:exData.name || "",
@@ -30,6 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             circuitId: exData.circuitId,
           } as IExercise);
           await exercise.save();
+          newExercises.push(exercise);
           exerciseIds.push(exercise._id);
         }
 
@@ -44,17 +46,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           musclesWorked: day.musclesWorked || [],
           warmupOptions: day.warmupOptions || [],
           explanation: day.explanation || "",
-          exercises: exerciseIds.map((id: Partial<IDay>) => ({
-            _id: id.toString(),
-            name: exercises.find((e: Partial<IExercise>) => e._id?.toString() === id.toString())?.name || "",
-            sets: exercises.find((e: Partial<IExercise>) => e._id?.toString() === id.toString())?.sets || 0,
-            reps: exercises.find((e: Partial<IExercise>) => e._id?.toString() === id.toString())?.reps || 0,
-            repsUnit: exercises.find((e: Partial<IExercise>) => e._id?.toString() === id.toString())?.repsUnit || "count",
-            weightUnit: exercises.find((e: Partial<IExercise>) => e._id?.toString() === id.toString())?.weightUnit || "kg",
-            circuitId: exercises.find((e: Partial<IExercise>) => e._id?.toString() === id.toString())?.circuitId || "",
-            weight: "",
-            rest: "",
-            tips: [],
+          exercises: exerciseIds.map((id) => ({
+            _id: id,
+            name: newExercises.find((e: IExercise) => e._id?.toString() === id.toString())?.name || "",
+            sets: newExercises.find((e: IExercise) => e._id?.toString() === id.toString())?.sets || 0,
+            reps: newExercises.find((e: IExercise) => e._id?.toString() === id.toString())?.reps || 0,
+            repsUnit: newExercises.find((e: IExercise) => e._id?.toString() === id.toString())?.repsUnit || "count",
+            weightUnit: newExercises.find((e: IExercise) => e._id?.toString() === id.toString())?.weightUnit || "kg",
+            circuitId: newExercises.find((e: IExercise) => e._id?.toString() === id.toString())?.circuitId || "",
+            weight: newExercises.find((e: IExercise) => e._id?.toString() === id.toString())?.weight || 0,
+            rest: newExercises.find((e: IExercise) => e._id?.toString() === id.toString())?.rest || "",
+            tips: newExercises.find((e: IExercise) => e._id?.toString() === id.toString())?.tips || [],
             completed: false,
             videos: [],
           })),

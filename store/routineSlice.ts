@@ -63,7 +63,6 @@ export const createRoutine = createAsyncThunk<RoutineData, IRoutine, { rejectVal
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
     try {
-      console.log("aqui")
       const response = await fetch("/api/routines", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -574,9 +573,8 @@ const routineSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(generateRoutine.fulfilled, (state, action: PayloadAction<RoutineData>) => {
+      .addCase(generateRoutine.fulfilled, (state) => {
         state.loading = false;
-        state.routines.push(action.payload);
       })
       .addCase(generateRoutine.rejected, (state, action: PayloadAction<ThunkError | undefined>) => {
         state.loading = false;

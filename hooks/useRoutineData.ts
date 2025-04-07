@@ -10,8 +10,8 @@ export default function useRoutineData(initialRoutines: RoutineData[]) {
   const selectedRoutine = selectedRoutineIndex !== null ? routines[selectedRoutineIndex] : undefined;
   const storedDayIndex = localStorage.getItem("dayIndex");
   const initialDayIndex = storedDayIndex ? parseInt(storedDayIndex) : 0;
-  const [selectedDay,setSelectedDay] = useState(selectedRoutine?.days[initialDayIndex]);
-
+  const [selectedDay, setSelectedDay] = useState<RoutineData["days"][number] | undefined>(selectedRoutine?.days[initialDayIndex]);
+  console.log(routines)
   useEffect(() => {
     if (routines.length > 0) {
       const routineIndex = localStorage.getItem("routineIndex");
@@ -35,7 +35,8 @@ export default function useRoutineData(initialRoutines: RoutineData[]) {
   }, [dispatch, initialRoutines, routines.length]);
 
   const setSelectedDayIndex = (index: number) => {
-    setSelectedDay(selectedRoutine?.days[index]);
+    setSelectedDay(selectedRoutine?.days[index] || {} as RoutineData["days"][number]);
+    //(selectedRoutine?.days[index] || {} as RoutineData["days"][number]);
     localStorage.setItem("dayIndex", index.toString());
   };
 
@@ -46,6 +47,7 @@ export default function useRoutineData(initialRoutines: RoutineData[]) {
     selectedRoutine,
     selectedDay,
     selectedDayIndex: initialDayIndex,
+    setSelectedDay,
     setSelectedDayIndex,
   };
 }

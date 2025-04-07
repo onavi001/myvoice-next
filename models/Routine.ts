@@ -28,7 +28,7 @@ export interface RoutineData {
       reps: number;
       repsUnit: "count" | "seconds";
       weightUnit: "kg" | "lb";
-      weight: string;
+      weight: number;
       rest: string;
       tips: string[];
       completed: boolean;
