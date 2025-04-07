@@ -22,6 +22,7 @@ interface RoutineState {
   routines: RoutineData[];
   selectedRoutineIndex: number | null;
   loading: boolean;
+  loadingVideos: Record<string, boolean>;
   error: string | null;
 }
 
@@ -29,6 +30,7 @@ const initialState: RoutineState = {
   routines: [],
   selectedRoutineIndex: null,
   loading: false,
+  loadingVideos: {},
   error: null,
 };
 
@@ -38,7 +40,6 @@ export const fetchRoutines = createAsyncThunk<RoutineData[], void, { rejectValue
   async (_, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string } };
     const token = state.user.token;
-    console.log("aqui")
     try {
       const response = await fetch("/api/routines", {
         headers: { Authorization: `Bearer ${token}` },
@@ -308,8 +309,8 @@ export const deleteExercise = createAsyncThunk<
 
 // Actualizar el estado de completado de un ejercicio
 export const updateExerciseCompleted = createAsyncThunk<
-  { routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; completed: boolean },
-  { routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; completed: boolean },
+  { routineId: string; dayIndex: number; exerciseIndex: number; completed: boolean },
+  { routineId: string; dayIndex: number; exerciseIndex: number; completed: boolean },
   { rejectValue: ThunkError }
 >(
   "routine/updateExerciseCompleted",
@@ -340,17 +341,15 @@ export const updateExerciseCompleted = createAsyncThunk<
 
 // Establecer videos para un ejercicio
 export const setExerciseVideos = createAsyncThunk<
-  { routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; videos: { _id: Types.ObjectId; url: string; isCurrent: boolean }[] },
-  { routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; videos: { url: string; isCurrent: boolean }[] },
+  { routineId: string; dayIndex: number; exerciseIndex: number; videos: { _id: string; url: string; isCurrent: boolean }[] },
+  { routineId: string; dayIndex: number; exerciseIndex: number; videos: { url: string; isCurrent: boolean }[] },
   { rejectValue: ThunkError }
 >(
   "routine/setExerciseVideos",
   async ({ routineId, dayIndex, exerciseIndex, videos }, { getState, rejectWithValue }) => {
     const state = getState() as { user: { token: string }; routine: RoutineState };
     const token = state.user.token;
-    const exerciseId = state.routine.routines[state.routine.selectedRoutineIndex!].days[dayIndex].exercises[
-      exerciseIndex
-    ]._id;
+    const exerciseId = state.routine.routines[state.routine.selectedRoutineIndex!].days[dayIndex].exercises[exerciseIndex]._id;
 
     try {
       const videoIds = [];
@@ -541,7 +540,7 @@ const routineSlice = createSlice({
         state.error = action.payload?.message ?? "Error desconocido";
       })
       // Update Exercise Completed
-      .addCase(updateExerciseCompleted.fulfilled, (state, action: PayloadAction<{ routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; completed: boolean }>) => {
+      .addCase(updateExerciseCompleted.fulfilled, (state, action: PayloadAction<{ routineId: string; dayIndex: number; exerciseIndex: number; completed: boolean }>) => {
         const { dayIndex, exerciseIndex, completed } = action.payload;
         if (state.selectedRoutineIndex !== null) {
           state.routines[state.selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex].completed = completed;
@@ -551,13 +550,23 @@ const routineSlice = createSlice({
         state.error = action.payload?.message ?? "Error desconocido";
       })
       // Set Exercise Videos
-      .addCase(setExerciseVideos.fulfilled, (state, action: PayloadAction<{ routineId: Types.ObjectId; dayIndex: number; exerciseIndex: number; videos: { _id: Types.ObjectId; url: string; isCurrent: boolean }[] }>) => {
-        const { dayIndex, exerciseIndex, videos } = action.payload;
-        if (state.selectedRoutineIndex !== null) {
-          state.routines[state.selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex].videos = videos;
-        }
+      .addCase(setExerciseVideos.pending, (state, action) => {
+        const { routineId, dayIndex, exerciseIndex } = action.meta.arg;
+        state.loadingVideos[`${routineId}-${dayIndex}-${exerciseIndex}`] = true;
       })
-      .addCase(setExerciseVideos.rejected, (state, action: PayloadAction<ThunkError | undefined>) => {
+      .addCase(setExerciseVideos.fulfilled, (state, action: PayloadAction<{ routineId: string; dayIndex: number; exerciseIndex: number; videos: { _id: string; url: string; isCurrent: boolean }[] }>) => {
+        const { routineId, dayIndex, exerciseIndex, videos } = action.payload;
+        if (state.selectedRoutineIndex !== null) {
+          state.routines[state.selectedRoutineIndex].days[dayIndex].exercises[exerciseIndex].videos = videos.map(video => ({
+            ...video,
+            _id: new Types.ObjectId(video._id),
+          }));
+        }
+        state.loadingVideos[`${routineId}-${dayIndex}-${exerciseIndex}`] = false;
+      })
+      .addCase(setExerciseVideos.rejected, (state, action) => {
+        const { routineId, dayIndex, exerciseIndex } = action.meta.arg;
+        state.loadingVideos[`${routineId}-${dayIndex}-${exerciseIndex}`] = false;
         state.error = action.payload?.message ?? "Error desconocido";
       })
       // Generate Routine
