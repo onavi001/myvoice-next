@@ -34,8 +34,8 @@ export default function ExerciseCard({
   const [timer, setTimer] = useState<number | null>(null);
   const [totalTime, setTotalTime] = useState<number | null>(null);
   const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
-  const [phase, setPhase] = useState<"sets" | "rest" | null>(null); // Cambiamos "reps" por "sets"
-  const [remainingSets, setRemainingSets] = useState<number>(0); // Cambiamos "remainingReps" por "remainingSets"
+  const [phase, setPhase] = useState<"start" | "sets" | "rest" | null>(null);
+  const [remainingSets, setRemainingSets] = useState<number>(0);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [showCongrats, setShowCongrats] = useState(false);
   const [openBodyModal, setOpenBodyModal] = useState(false);
@@ -81,7 +81,7 @@ export default function ExerciseCard({
   };
 
   const handleStartExercise = () => {
-    const sets = parseInt(String(currentExercise.sets || 0), 10); // Usamos "sets" en lugar de "reps"
+    const sets = parseInt(String(currentExercise.sets || 0), 10);
     const restTime = parseInt(String(currentExercise.rest || 0), 10);
 
     if (isNaN(sets) || sets <= 0 || isNaN(restTime) || restTime <= 0) {
@@ -89,22 +89,40 @@ export default function ExerciseCard({
     }
 
     setIsInProgress(true);
-    setRemainingSets(sets); // Inicializamos con el número de series
-    startSetPhase(); // Cambiamos "startRepPhase" por "startSetPhase"
+    setRemainingSets(sets);
+    startCountdown();
+  };
+
+  const startCountdown = () => {
+    setPhase("start");
+    setTimer(45);
+    setTotalTime(45);
+    const beep = new Audio("/alarms/countdown.mp3");
+    beep.play().catch((error) => console.error("Error al reproducir beep:", error));
+    const countdownInterval = setInterval(() => {
+      setTimer((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(countdownInterval);
+          setAlertMessage("¡Comienza ahora!");
+          startSetPhase();
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    setIntervalId(countdownInterval);
   };
 
   const startSetPhase = () => {
     setPhase("sets");
-    setTimer(10); // Cada serie dura 60 segundos
-    setTotalTime(10);
+    setTimer(15);
+    setTotalTime(15);
 
-    const interval: NodeJS.Timeout = setInterval(() => {
+    const interval = setInterval(() => {
       setTimer((prev) => {
         if (prev === null || prev <= 1) {
           clearInterval(interval);
           setAlertMessage("¡Serie completada! Ahora descansa.");
-          const audio = new Audio("/alarmas/alarma1.mp3");
-          audio.play().catch((error) => console.error("Error al reproducir audio:", error));
           startRestPhase();
           return null;
         }
@@ -119,31 +137,29 @@ export default function ExerciseCard({
     setPhase("rest");
     setTimer(restTime);
     setTotalTime(restTime);
-
     const restInterval = setInterval(() => {
       setTimer((prev) => {
         if (prev === null || prev <= 1) {
           clearInterval(restInterval);
-          setAlertMessage("¡Descanso terminado! Siguiente serie.");
-          const audio = new Audio("/alarmas/alarma1.mp3");
-          audio.play().catch((error) => console.error("Error al reproducir audio:", error));
-          setRemainingSets((prevSets) => {
-            if (prevSets > 1) {
-              startSetPhase();
-              return prevSets - 1;
-            } else {
-              setIsInProgress(false);
-              setTimer(null);
-              setTotalTime(null);
-              setIntervalId(null);
-              setPhase(null);
-              setAlertMessage(null);
-              setShowCongrats(true);
-              setTimeout(() => setShowCongrats(false), 3000);
-              return 0;
-            }
-          });
+          setAlertMessage(remainingSets > 1 ? "¡Descanso terminado! Siguiente serie." : "¡Ejercicio terminado!");
+          if (remainingSets > 1) {
+            setRemainingSets((prev) => prev - 1);
+            startSetPhase();
+          } else {
+            setIsInProgress(false);
+            setTimer(null);
+            setTotalTime(null);
+            setIntervalId(null);
+            setPhase(null);
+            setAlertMessage(null);
+            setShowCongrats(true);
+            setTimeout(() => setShowCongrats(false), 3000);
+            setRemainingSets(0);
+          }
           return null;
+        } else if (prev == 11) {
+          const beep = new Audio("/alarms/countdown.mp3");
+          beep.play().catch((error) => console.error("Error al reproducir beep:", error));
         }
         return prev - 1;
       });
@@ -230,7 +246,7 @@ export default function ExerciseCard({
                   cx="30"
                   cy="30"
                   r={radius}
-                  stroke={phase === "sets" ? "#FFD700" : "#34C759"}
+                  stroke={phase === "start" ? "#FF9800" : phase === "sets" ? "#FFD700" : "#34C759"}
                   strokeWidth="4"
                   fill="none"
                   strokeDasharray={circumference}
@@ -248,10 +264,16 @@ export default function ExerciseCard({
                   {timer} s
                 </text>
               </svg>
-              <p className={`mt-2 text-sm font-bold ${phase === "sets" ? "text-[#FFD700]" : "text-[#34C759]"}`}>
-                {phase === "sets"
+              <p
+                className={`mt-2 text-sm font-bold ${
+                  phase === "start" ? "text-[#FF9800]" : phase === "sets" ? "text-[#FFD700]" : "text-[#34C759]"
+                }`}
+              >
+                {phase === "start"
+                  ? "¡Preparándote!"
+                  : phase === "sets"
                   ? `Serie ${currentExercise.sets - remainingSets + 1} de ${currentExercise.sets}`
-                  : `Descanso (${remainingSets - 1} series restantes)`}
+                  : `Descanso (${remainingSets} series restantes)`}
               </p>
             </div>
           )}
@@ -339,8 +361,8 @@ export default function ExerciseCard({
               <label className="text-[#B0B0B0]">Descanso:</label>
               <Input
                 name="rest"
-                value={(currentExercise.rest || "") }
-                onChange={(e) => handleInputChange("rest", e.target.value)}
+                value={currentExercise.rest || ""}
+                onChange={(e) => handleInputChange("rest", Number(e.target.value))}
               />
             </div>
             <div>
