@@ -9,8 +9,9 @@ import Button from "../Button";
 import VideoPlayer from "./VideoPlayer";
 import ModelWorkoutModal from "../ModelWorkoutModal";
 import Loader, { SmallLoader } from "../Loader";
-import { ArrowPathIcon, PlayCircleIcon, EyeIcon, StopCircleIcon } from "@heroicons/react/16/solid";
+import { ArrowPathIcon, PlayCircleIcon, EyeIcon } from "@heroicons/react/16/solid";
 import useExerciseActions from "../../hooks/useExerciseActions";
+import Timer from "../Timer";
 
 export default function ExerciseCard({
   exercise,
@@ -30,18 +31,10 @@ export default function ExerciseCard({
   const [editData, setEditData] = useState<Partial<IExercise>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
-  const [isInProgress, setIsInProgress] = useState(false);
-  const [timer, setTimer] = useState<number | null>(null);
-  const [totalTime, setTotalTime] = useState<number | null>(null);
-  const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
-  const [phase, setPhase] = useState<"start" | "sets" | "rest" | null>(null);
-  const [remainingSets, setRemainingSets] = useState<number>(0);
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
-  const [showCongrats, setShowCongrats] = useState(false);
+  const [isTimerActive, setIsTimerActive] = useState(false);
+  const { loadingVideos, handleSave, handleToggleCompleted, handleFetchVideos } = useExerciseActions();
   const [openBodyModal, setOpenBodyModal] = useState(false);
   const [musclesToShow, setMusclesToShow] = useState<string[]>([]);
-  const { loadingVideos, handleSave, handleToggleCompleted, handleFetchVideos } = useExerciseActions();
-
   useEffect(() => {
     if (isExpanded && selectedRoutineIndex !== null) {
       handleFetchVideos(exercise.name, selectedRoutineIndex, dayIndex, exerciseIndex);
@@ -80,7 +73,7 @@ export default function ExerciseCard({
     }
   };
 
-  const handleStartExercise = () => {
+  const handleStartTimer = () => {
     const sets = parseInt(String(currentExercise.sets || 0), 10);
     const restTime = parseInt(String(currentExercise.rest || 0), 10);
 
@@ -88,329 +81,178 @@ export default function ExerciseCard({
       return;
     }
 
-    setIsInProgress(true);
-    setRemainingSets(sets);
-    startCountdown();
+    setIsTimerActive(true);
   };
 
-  const startCountdown = () => {
-    setPhase("start");
-    setTimer(45);
-    setTotalTime(45);
-    const beep = new Audio("/alarms/countdown.mp3");
-    beep.play().catch((error) => console.error("Error al reproducir beep:", error));
-    const countdownInterval = setInterval(() => {
-      setTimer((prev) => {
-        if (prev === null || prev <= 1) {
-          clearInterval(countdownInterval);
-          setAlertMessage("¡Comienza ahora!");
-          startSetPhase();
-          return null;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    setIntervalId(countdownInterval);
+  const handleTimerComplete = () => {
+    setIsTimerActive(false);
   };
 
-  const startSetPhase = () => {
-    setPhase("sets");
-    setTimer(15);
-    setTotalTime(15);
-
-    const interval = setInterval(() => {
-      setTimer((prev) => {
-        if (prev === null || prev <= 1) {
-          clearInterval(interval);
-          setAlertMessage("¡Serie completada! Ahora descansa.");
-          startRestPhase();
-          return null;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    setIntervalId(interval);
-  };
-
-  const startRestPhase = () => {
-    const restTime = parseInt(String(currentExercise.rest || 0), 10);
-    setPhase("rest");
-    setTimer(restTime);
-    setTotalTime(restTime);
-    const restInterval = setInterval(() => {
-      setTimer((prev) => {
-        if (prev === null || prev <= 1) {
-          clearInterval(restInterval);
-          setAlertMessage(remainingSets > 1 ? "¡Descanso terminado! Siguiente serie." : "¡Ejercicio terminado!");
-          if (remainingSets > 1) {
-            setRemainingSets((prev) => prev - 1);
-            startSetPhase();
-          } else {
-            setIsInProgress(false);
-            setTimer(null);
-            setTotalTime(null);
-            setIntervalId(null);
-            setPhase(null);
-            setAlertMessage(null);
-            setShowCongrats(true);
-            setTimeout(() => setShowCongrats(false), 3000);
-            setRemainingSets(0);
-          }
-          return null;
-        } else if (prev == 11) {
-          const beep = new Audio("/alarms/countdown.mp3");
-          beep.play().catch((error) => console.error("Error al reproducir beep:", error));
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    setIntervalId(restInterval);
-  };
-
-  const handleStopExercise = () => {
-    if (intervalId) {
-      clearInterval(intervalId);
-      setIsInProgress(false);
-      setTimer(null);
-      setTotalTime(null);
-      setIntervalId(null);
-      setPhase(null);
-      setRemainingSets(0);
-      setAlertMessage(null);
-      setShowCongrats(false);
-    }
+  const handleTimerStop = () => {
+    setIsTimerActive(false);
   };
 
   const currentExercise = { ...exercise, ...editData };
 
-  const radius = 25;
-  const circumference = 2 * Math.PI * radius;
-  const progress = timer !== null && totalTime !== null ? (timer / totalTime) * circumference : circumference;
-  const strokeDashoffset = circumference - progress;
-
   return (
-    <Card className="overflow-hidden">
-      <button
-        onClick={toggleExpand}
-        className="w-full flex justify-between items-center p-2 text-left hover:bg-[#4A4A4A] transition-colors"
-      >
-        <div className="flex items-center">
-          {isToggling ? (
-            <Loader />
-          ) : (
-            <input
-              type="checkbox"
-              checked={currentExercise.completed || false}
-              onChange={onToggleCompleted}
-              onClick={(e) => e.stopPropagation()}
-              className="mr-2 accent-[#34C759]"
-            />
-          )}
-          <span className="text-sm font-semibold text-white truncate">{exercise.name}</span>
-        </div>
-        <span className="text-[#B0B0B0] text-xs">{isExpanded ? "▲" : "▼"}</span>
-      </button>
-      {isExpanded && (
-        <div className="p-2 bg-[#4A4A4A] text-xs space-y-2">
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleStartExercise}
-              className="flex items-center bg-[#34C759] text-black rounded-full text-xs hover:bg-[#2ca44e] disabled:opacity-50"
-              disabled={isInProgress}
-            >
-              <span className="ml-1">Iniciar ejercicio</span>
-              <PlayCircleIcon className="w-4 h-4 mx-2" />
-            </Button>
-            {isInProgress && (
-              <Button
-                onClick={handleStopExercise}
-                className="flex items-center bg-[#EF5350] text-white rounded-full text-xs hover:bg-[#D32F2F]"
-              >
-                <span className="ml-1">Detener</span>
-                <StopCircleIcon className="w-4 h-4 mx-2" />
-              </Button>
-            )}
-          </div>
-          {isInProgress && timer !== null && totalTime !== null && (
-            <div className="flex flex-col items-center">
-              <svg width="60" height="60" className="relative">
-                <circle
-                  cx="30"
-                  cy="30"
-                  r={radius}
-                  stroke="#2D2D2D"
-                  strokeWidth="4"
-                  fill="none"
-                />
-                <circle
-                  cx="30"
-                  cy="30"
-                  r={radius}
-                  stroke={phase === "start" ? "#FF9800" : phase === "sets" ? "#FFD700" : "#34C759"}
-                  strokeWidth="4"
-                  fill="none"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={strokeDashoffset}
-                  transform="rotate(-90 30 30)"
-                  className="transition-all duration-1000 ease-linear"
-                />
-                <text
-                  x="50%"
-                  y="50%"
-                  textAnchor="middle"
-                  dy=".3em"
-                  className="text-white font-semibold text-sm"
-                >
-                  {timer} s
-                </text>
-              </svg>
-              <p
-                className={`mt-2 text-sm font-bold ${
-                  phase === "start" ? "text-[#FF9800]" : phase === "sets" ? "text-[#FFD700]" : "text-[#34C759]"
-                }`}
-              >
-                {phase === "start"
-                  ? "¡Preparándote!"
-                  : phase === "sets"
-                  ? `Serie ${currentExercise.sets - remainingSets + 1} de ${currentExercise.sets}`
-                  : `Descanso (${remainingSets} series restantes)`}
-              </p>
-            </div>
-          )}
-          {alertMessage && (
-            <div className="text-center text-[#FFD700] bg-[#2D2D2D] p-2 rounded-md mt-2 animate-pulse">
-              {alertMessage}
-            </div>
-          )}
-          {showCongrats && (
-            <div className="text-center text-[#34C759] bg-[#2D2D2D] p-4 rounded-md mt-2 animate-congrats">
-              <p className="text-lg font-bold">🏆 ¡Felicidades, lo lograste!</p>
-              <p className="text-sm">¡Gran trabajo completando las series!</p>
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-1">
-            <div>
-              <button
-                onClick={() => {
-                  setOpenBodyModal(true);
-                  setMusclesToShow(exercise.muscleGroup);
-                }}
-                className="flex text-[#B0B0B0] font-semibold"
-              >
-                Músculo: <EyeIcon className="w-4 h-4 ml-2" />
-              </button>
-              <p className="text-[#FFFFFF]">{currentExercise.muscleGroup.join(", ")}</p>
-              <Button
-                onClick={() => onGenerateExercise(dayIndex, exerciseIndex)}
-                className="my-4 flex items-center gap-1 bg-[#34C759] text-black px-2 py-1 rounded-full text-xs hover:bg-[#2ca44e]"
-              >
-                <ArrowPathIcon className="w-4 h-4" />
-                <span>Regenerar</span>
-              </Button>
-            </div>
-            {currentExercise.tips?.length > 0 && (
-              <div>
-                <span className="text-[#B0B0B0] font-semibold">Consejos:</span>
-                <ul className="list-disc pl-3 text-[#FFFFFF] max-w-full">
-                  {currentExercise.tips.map((tip, index) => (
-                    <li key={index}>{tip}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-          {loadingVideos ? (
-            <SmallLoader />
-          ) : (
-            <VideoPlayer exercise={exercise} routineId={routineId.toString()} dayIndex={dayIndex} exerciseIndex={exerciseIndex} />
-          )}
-          <div className="grid grid-cols-3 gap-1">
-            <div>
-              <label className="text-[#B0B0B0]">Series:</label>
-              <Input
-                name="sets"
-                type="number"
-                value={currentExercise.sets || ""}
-                onChange={(e) => handleInputChange("sets", Number(e.target.value))}
-              />
-            </div>
-            <div>
-              <label className="text-[#B0B0B0]">Reps:</label>
-              <Input
-                name="reps"
-                type="number"
-                value={currentExercise.reps || ""}
-                onChange={(e) => handleInputChange("reps", Number(e.target.value))}
-              />
-            </div>
-            <div>
-              <label className="text-[#B0B0B0]">Unidad Reps:</label>
-              <select
-                name="repsUnit"
-                value={currentExercise.repsUnit || "count"}
-                onChange={(e) => handleInputChange("repsUnit", e.target.value)}
-                className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
-              >
-                <option value="count">Unidades (U)</option>
-                <option value="seconds">Segundos (S)</option>
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-1">
-            <div>
-              <label className="text-[#B0B0B0]">Descanso:</label>
-              <Input
-                name="rest"
-                value={currentExercise.rest || ""}
-                onChange={(e) => handleInputChange("rest", Number(e.target.value))}
-              />
-            </div>
-            <div>
-              <label className="text-[#B0B0B0]">Peso:</label>
-              <Input
-                name="weight"
-                value={currentExercise.weight || ""}
-                onChange={(e) => handleInputChange("weight", e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-[#B0B0B0]">Unidad:</label>
-              <select
-                name="weightUnit"
-                value={currentExercise.weightUnit || "kg"}
-                onChange={(e) => handleInputChange("weightUnit", e.target.value)}
-                className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
-              >
-                <option value="kg">Kilos (kg)</option>
-                <option value="lb">Libras (lb)</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="text-[#B0B0B0]">Notas:</label>
-            <Textarea
-              name="notes"
-              value={currentExercise.notes || ""}
-              onChange={(e) => handleInputChange("notes", e.target.value)}
-              className="h-8 resize-none"
-            />
-          </div>
-          <Button
-            onClick={onSave}
-            className="w-full disabled:opacity-50"
-            disabled={!Object.keys(editData).length || isSaving}
-          >
-            {isSaving ? (
-              <>
-                <Loader />
-                Guardar
-              </>
+    <>
+      <Card className="overflow-hidden">
+        <button
+          onClick={toggleExpand}
+          className="w-full flex justify-between items-center p-2 text-left hover:bg-[#4A4A4A] transition-colors"
+        >
+          <div className="flex items-center">
+            {isToggling ? (
+              <Loader />
             ) : (
-              "Guardar"
+              <input
+                type="checkbox"
+                checked={currentExercise.completed || false}
+                onChange={onToggleCompleted}
+                onClick={(e) => e.stopPropagation()}
+                className="mr-2 accent-[#34C759]"
+              />
             )}
-          </Button>
-        </div>
-      )}
+            <span className="text-sm font-semibold text-white truncate">{exercise.name}</span>
+          </div>
+          <span className="text-[#B0B0B0] text-xs">{isExpanded ? "▲" : "▼"}</span>
+        </button>
+        {isExpanded && (
+          <div className="p-2 bg-[#4A4A4A] text-xs space-y-2">
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleStartTimer}
+                className="flex items-center bg-[#34C759] text-black rounded-full text-xs hover:bg-[#2ca44e] disabled:opacity-50"
+                disabled={isTimerActive}
+              >
+                <span className="ml-1">Iniciar ejercicio</span>
+                <PlayCircleIcon className="w-4 h-4 mx-2" />
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-1">
+              <div>
+                <button
+                  onClick={() => {
+                    setOpenBodyModal(true);
+                    setMusclesToShow(exercise.muscleGroup);
+                  }}
+                  className="flex text-[#B0B0B0] font-semibold"
+                >
+                  Músculo: <EyeIcon className="w-4 h-4 ml-2" />
+                </button>
+                <p className="text-[#FFFFFF]">{currentExercise.muscleGroup.join(", ")}</p>
+                <Button
+                  onClick={() => onGenerateExercise(dayIndex, exerciseIndex)}
+                  className="my-4 flex items-center gap-1 bg-[#34C759] text-black px-2 py-1 rounded-full text-xs hover:bg-[#2ca44e]"
+                >
+                  <ArrowPathIcon className="w-4 h-4" />
+                  <span>Regenerar</span>
+                </Button>
+              </div>
+              {currentExercise.tips?.length > 0 && (
+                <div>
+                  <span className="text-[#B0B0B0] font-semibold">Consejos:</span>
+                  <ul className="list-disc pl-3 text-[#FFFFFF] max-w-full">
+                    {currentExercise.tips.map((tip, index) => (
+                      <li key={index}>{tip}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            {loadingVideos ? (
+              <SmallLoader />
+            ) : (
+              <VideoPlayer exercise={exercise} routineId={routineId.toString()} dayIndex={dayIndex} exerciseIndex={exerciseIndex} />
+            )}
+            <div className="grid grid-cols-3 gap-1">
+              <div>
+                <label className="text-[#B0B0B0]">Series:</label>
+                <Input
+                  name="sets"
+                  type="number"
+                  value={currentExercise.sets || ""}
+                  onChange={(e) => handleInputChange("sets", Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <label className="text-[#B0B0B0]">Reps:</label>
+                <Input
+                  name="reps"
+                  type="number"
+                  value={currentExercise.reps || ""}
+                  onChange={(e) => handleInputChange("reps", Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <label className="text-[#B0B0B0]">Unidad Reps:</label>
+                <select
+                  name="repsUnit"
+                  value={currentExercise.repsUnit || "count"}
+                  onChange={(e) => handleInputChange("repsUnit", e.target.value)}
+                  className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
+                >
+                  <option value="count">Unidades (U)</option>
+                  <option value="seconds">Segundos (S)</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-1">
+              <div>
+                <label className="text-[#B0B0B0]">Descanso:</label>
+                <Input
+                  name="rest"
+                  value={currentExercise.rest || ""}
+                  onChange={(e) => handleInputChange("rest", Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <label className="text-[#B0B0B0]">Peso:</label>
+                <Input
+                  name="weight"
+                  value={currentExercise.weight || ""}
+                  onChange={(e) => handleInputChange("weight", e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-[#B0B0B0]">Unidad:</label>
+                <select
+                  name="weightUnit"
+                  value={currentExercise.weightUnit || "kg"}
+                  onChange={(e) => handleInputChange("weightUnit", e.target.value)}
+                  className="w-full bg-[#2D2D2D] border border-[#4A4A4A] text-white p-2 rounded-md text-xs"
+                >
+                  <option value="kg">Kilos (kg)</option>
+                  <option value="lb">Libras (lb)</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-[#B0B0B0]">Notas:</label>
+              <Textarea
+                name="notes"
+                value={currentExercise.notes || ""}
+                onChange={(e) => handleInputChange("notes", e.target.value)}
+                className="h-8 resize-none"
+              />
+            </div>
+            <Button
+              onClick={onSave}
+              className="w-full disabled:opacity-50"
+              disabled={!Object.keys(editData).length || isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <Loader />
+                  Guardar
+                </>
+              ) : (
+                "Guardar"
+              )}
+            </Button>
+          </div>
+        )}
+      </Card>
       {openBodyModal && (
         <ModelWorkoutModal
           musclesToShow={musclesToShow}
@@ -418,6 +260,15 @@ export default function ExerciseCard({
           onClose={() => setOpenBodyModal(false)}
         />
       )}
-    </Card>
+      {isTimerActive && (
+        <Timer
+          sets={parseInt(String(currentExercise.sets || 0), 10)}
+          restTime={parseInt(String(currentExercise.rest || 0), 10)}
+          onComplete={handleTimerComplete}
+          onStop={handleTimerStop}
+          isActive={isTimerActive}
+        />
+      )}
+    </>
   );
 }
