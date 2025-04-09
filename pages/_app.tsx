@@ -1,4 +1,3 @@
-// pages/_app.tsx
 import { AppProps } from "next/app";
 import { Provider } from "react-redux";
 import { AppDispatch, RootState, store } from "../store";
@@ -11,10 +10,11 @@ import Navbar from "../components/Navbar";
 import Head from "next/head";
 import Loader from "../components/Loader";
 import { motion, AnimatePresence } from "framer-motion";
+import Layout from "../components/layout";
 
 function AppInitializer({ children }: { children: React.ReactNode }) {
   const dispatch: AppDispatch = useDispatch();
-  const { loading, token } = useSelector((state: RootState) => state.user);
+  const { loading, token, user } = useSelector((state: RootState) => state.user);
   const { routines } = useSelector((state: RootState) => state.routine);
   const selectedRoutine = useSelector((state: RootState) => state.routine.selectedRoutineIndex);
   const router = useRouter();
@@ -68,8 +68,6 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
       </AnimatePresence>
     )
   }
-    
-
   return (
     <>
       {
@@ -100,7 +98,14 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
             }
           />
       }
-      {children}
+      {
+        user ? 
+        <Layout>
+          {children}
+        </Layout>
+        :
+        children
+      }
     </>
   );
 }
@@ -118,7 +123,7 @@ function MyApp({ Component, pageProps }: AppProps) {
       </Head>
       <Provider store={store}>
         <AppInitializer>
-          <Component {...pageProps} />
+        <Component {...pageProps} />
         </AppInitializer>
       </Provider>
     </>
