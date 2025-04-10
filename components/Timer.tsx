@@ -90,7 +90,7 @@ export default function Timer({ sets, restTime, onComplete, onStop, isActive }: 
       restTimeLeft -= 1;
       setTimer(restTimeLeft);
 
-      if (restTimeLeft <= 10) {
+      if (restTimeLeft === 11) {
         const beep = new Audio("/alarms/countdown.mp3");
         beep.play().catch((error) => console.error("Error al reproducir beep:", error));
       }
